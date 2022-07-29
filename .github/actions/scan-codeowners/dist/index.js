@@ -38,6 +38,13 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const picomatch_1 = __nccwpck_require__(8569);
+/**
+ * doc links
+ * https://github.com/actions/toolkit
+ * https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
+ * https://octokit.github.io/rest.js/v18#repos
+ *
+ */
 function fetchCodeowners(octokit, { owner, repo, ref }) {
     return __awaiter(this, void 0, void 0, function* () {
         const result = yield octokit.rest.repos.getContent({
@@ -101,9 +108,6 @@ function run() {
                 const addedOrChangedFiles = result.data
                     .filter(change => change.status !== 'removed')
                     .map(change => change.filename);
-                for (const filename of addedOrChangedFiles) {
-                    core.info(`added or changed: ${filename}`);
-                }
                 const codeowners = yield fetchCodeowners(octokit, {
                     owner: pull_request.base.repo.owner.login,
                     repo: pull_request.base.repo.name,
@@ -111,6 +115,7 @@ function run() {
                 });
                 core.info(`CONTENTS OF CODEOWNERS: ${codeowners}`);
                 const patterns = parseCodeownersPatterns(codeowners);
+                core.info(`changed files: ${addedOrChangedFiles.join('\n')}`);
                 const unmatchedFiles = filterMatches(addedOrChangedFiles, patterns);
                 for (const filename of unmatchedFiles) {
                     core.info(`Did not match: ${filename}`);

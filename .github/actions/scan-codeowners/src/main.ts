@@ -8,6 +8,14 @@ import {
   PushEvent
 } from '@octokit/webhooks-definitions/schema'
 
+/**
+ * doc links
+ * https://github.com/actions/toolkit
+ * https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
+ * https://octokit.github.io/rest.js/v18#repos
+ *
+ */
+
 async function fetchCodeowners(octokit, {owner, repo, ref}) {
   const result = await octokit.rest.repos.getContent({
     owner,
@@ -72,9 +80,6 @@ async function run(): Promise<void> {
       const addedOrChangedFiles = result.data
         .filter(change => change.status !== 'removed')
         .map(change => change.filename)
-      for (const filename of addedOrChangedFiles) {
-        core.info(`added or changed: ${filename}`)
-      }
 
       const codeowners = await fetchCodeowners(octokit, {
         owner: pull_request.base.repo.owner.login,
@@ -83,6 +88,7 @@ async function run(): Promise<void> {
       })
       core.info(`CONTENTS OF CODEOWNERS: ${codeowners}`)
       const patterns = parseCodeownersPatterns(codeowners)
+      core.info(`changed files: ${addedOrChangedFiles.join('\n')}`)
       const unmatchedFiles = filterMatches(addedOrChangedFiles, patterns)
 
       for (const filename of unmatchedFiles) {
