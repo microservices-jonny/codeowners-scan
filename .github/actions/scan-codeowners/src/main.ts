@@ -43,7 +43,11 @@ function parseCodeownersPatterns(codeowners: string): string[] {
 
 // Return files that do not match
 function filterMatches(filenames: string[], patterns: string[]): string[] {
-  return filenames.filter(filename => !isMatch(filename, patterns))
+  return filenames.filter(filename => {
+    const res = !isMatch(filename, patterns)
+    core.info(`check ${filename} against patterns ${patterns} -> ${res}`)
+    return res
+  })
 }
 
 async function run(): Promise<void> {

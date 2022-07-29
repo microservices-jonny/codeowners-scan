@@ -73,7 +73,11 @@ function parseCodeownersPatterns(codeowners) {
 }
 // Return files that do not match
 function filterMatches(filenames, patterns) {
-    return filenames.filter(filename => !(0, picomatch_1.isMatch)(filename, patterns));
+    return filenames.filter(filename => {
+        const res = !(0, picomatch_1.isMatch)(filename, patterns);
+        core.info(`check ${filename} against patterns ${patterns} -> ${res}`);
+        return res;
+    });
 }
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
