@@ -37,6 +37,21 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
+function fetchCodeowners(octokit, { owner, repo, ref }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const result = yield octokit.rest.repos.getContent({
+            owner,
+            repo,
+            ref,
+            path: 'CODEOWNERS'
+        });
+        if (result.data.content) {
+            const encoded = Buffer.from(result.data.content || '', 'base64');
+            const decoded = encoded.toString('utf8');
+            return decoded;
+        }
+    });
+}
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -56,9 +71,18 @@ function run() {
                     repo: pull_request.base.repo.name,
                     pull_number: pull_request.number
                 });
-                for (const change of result.data) {
-                    core.info(`CHANGED: ${change.filename}`);
+                const addedOrChangedFiles = result.data
+                    .filter(change => change.status !== 'removed')
+                    .map(change => change.filename);
+                for (const filename of addedOrChangedFiles) {
+                    core.info(`added or changed: ${filename}`);
                 }
+                const codeowners = yield fetchCodeowners(octokit, {
+                    owner: pull_request.base.repo.owner.login,
+                    repo: pull_request.base.repo.name,
+                    ref: pull_request.base.ref
+                });
+                core.info(`CONTENTS OF CODEOWNERS: ${codeowners}`);
             }
             // https://github.com/actions/toolkit/tree/main/packages/core
             core.info(`before: ${payload.before} -> after ${payload.after}`);

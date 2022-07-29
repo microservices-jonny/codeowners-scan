@@ -7,6 +7,20 @@ import {
   PushEvent
 } from '@octokit/webhooks-definitions/schema'
 
+async function fetchCodeowners(octokit, {owner, repo, ref}) {
+  const result = await octokit.rest.repos.getContent({
+    owner,
+    repo,
+    ref,
+    path: 'CODEOWNERS'
+  })
+  if (result.data.content) {
+    const encoded = Buffer.from(result.data.content || '', 'base64')
+    const decoded = encoded.toString('utf8')
+    return decoded
+  }
+}
+
 async function run(): Promise<void> {
   try {
     const token = core.getInput('GITHUB_TOKEN')
@@ -26,9 +40,19 @@ async function run(): Promise<void> {
         repo: pull_request.base.repo.name,
         pull_number: pull_request.number
       })
-      for (const change of result.data) {
-        core.info(`CHANGED: ${change.filename}`)
+      const addedOrChangedFiles = result.data
+        .filter(change => change.status !== 'removed')
+        .map(change => change.filename)
+      for (const filename of addedOrChangedFiles) {
+        core.info(`added or changed: ${filename}`)
       }
+
+      const codeowners = await fetchCodeowners(octokit, {
+        owner: pull_request.base.repo.owner.login,
+        repo: pull_request.base.repo.name,
+        ref: pull_request.base.ref
+      })
+      core.info(`CONTENTS OF CODEOWNERS: ${codeowners}`)
     }
 
     // https://github.com/actions/toolkit/tree/main/packages/core
