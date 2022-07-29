@@ -9,8 +9,8 @@ import {
 
 async function run(): Promise<void> {
   try {
-    // const token = core.getInput('GITHUB_TOKEN')
-    // const octokit = github.getOctokit(token)
+    const token = core.getInput('GITHUB_TOKEN')
+    const octokit = github.getOctokit(token)
 
     let payload = github.context.payload
     core.info(`HELLO, eventName: ${github.context.eventName}`)
@@ -19,8 +19,16 @@ async function run(): Promise<void> {
       payload = payload as PullRequestEvent
       const afterSha = payload.after
       const pull_request = payload.pull_request as PullRequest
-      const baseRef = pull_request.base.ref
-      core.info(`HELLO baseRef: ${baseRef}, afterSha ${afterSha}`)
+      const baseSha = pull_request.base.sha
+      core.info(`HELLO baseRef: ${baseSha}, afterSha ${afterSha}`)
+      const result = await octokit.rest.pulls.listFiles({
+        owner: pull_request.base.repo.owner.login,
+        repo: pull_request.base.repo.name,
+        pull_number: pull_request.number
+      })
+      for (const change of result.data) {
+        core.info(`CHANGED: ${change.filename}`)
+      }
     }
 
     // https://github.com/actions/toolkit/tree/main/packages/core

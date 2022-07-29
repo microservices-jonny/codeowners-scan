@@ -40,8 +40,8 @@ const github = __importStar(__nccwpck_require__(5438));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // const token = core.getInput('GITHUB_TOKEN')
-            // const octokit = github.getOctokit(token)
+            const token = core.getInput('GITHUB_TOKEN');
+            const octokit = github.getOctokit(token);
             let payload = github.context.payload;
             core.info(`HELLO, eventName: ${github.context.eventName}`);
             if (github.context.eventName === 'pull_request') {
@@ -49,8 +49,16 @@ function run() {
                 payload = payload;
                 const afterSha = payload.after;
                 const pull_request = payload.pull_request;
-                const baseRef = pull_request.base.ref;
-                core.info(`HELLO baseRef: ${baseRef}, afterSha ${afterSha}`);
+                const baseSha = pull_request.base.sha;
+                core.info(`HELLO baseRef: ${baseSha}, afterSha ${afterSha}`);
+                const result = yield octokit.rest.pulls.listFiles({
+                    owner: pull_request.base.repo.owner.login,
+                    repo: pull_request.base.repo.name,
+                    pull_number: pull_request.number
+                });
+                for (const change of result.data) {
+                    core.info(`CHANGED: ${change.filename}`);
+                }
             }
             // https://github.com/actions/toolkit/tree/main/packages/core
             core.info(`before: ${payload.before} -> after ${payload.after}`);
