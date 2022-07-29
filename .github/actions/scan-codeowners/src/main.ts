@@ -1,16 +1,19 @@
 import * as core from '@actions/core'
-import {wait} from './wait'
+import * as github from '@actions/github'
+import {PushEvent} from '@octokit/webhooks-definitions/schema'
 
 async function run(): Promise<void> {
   try {
-    const ms: string = core.getInput('milliseconds')
-    core.debug(`Waiting ${ms} milliseconds ...`) // debug is only output if you set the secret `ACTIONS_STEP_DEBUG` to true
+    // const token = core.getInput('GITHUB_TOKEN')
+    // const octokit = github.getOctokit(token)
 
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
+    if (github.context.eventName === 'push') {
+      // https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
+      const payload = github.context.payload as PushEvent
 
-    core.setOutput('time', new Date().toTimeString())
+      // https://github.com/actions/toolkit/tree/main/packages/core
+      core.info(`before: ${payload.before} -> after ${payload.after}`)
+    }
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
