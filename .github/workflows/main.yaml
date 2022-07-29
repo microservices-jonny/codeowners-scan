@@ -10,15 +10,10 @@ jobs:
       # you must check out the repository
       - name: Checkout
         uses: actions/checkout@v3
-      - name: scan codeowners
-        uses: ./.github/actions/scan-codeowners
-        with:
-          milliseconds: 1000
       - name: Hello world action step
         uses: ./.github/actions/basic
         id: hello
         with:
           who-to-greet: 'Mona the Octocat'
-      # Use the output from the `hello` step
-      - name: Get the output time
-        run: echo "The time was ${{ steps.hello.outputs.time }}"
+      - name: scan codeowners
+        uses: ./.github/actions/scan-codeowners
