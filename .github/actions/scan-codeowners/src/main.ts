@@ -13,6 +13,7 @@ import {
  * https://github.com/actions/toolkit
  * https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
  * https://octokit.github.io/rest.js/v18#repos
+ * https://github.com/micromatch/picomatch#options
  *
  */
 
@@ -52,7 +53,7 @@ function parseCodeownersPatterns(codeowners: string): string[] {
 // Return files that do not match
 function filterMatches(filenames: string[], patterns: string[]): string[] {
   return filenames.filter(filename => {
-    const res = !isMatch(filename, patterns)
+    const res = !isMatch(filename, patterns, {dot: true})
     core.info(`check ${filename} against patterns ${patterns} -> ${res}`)
     return res
   })
