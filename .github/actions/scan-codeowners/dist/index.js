@@ -43,6 +43,7 @@ const picomatch_1 = __nccwpck_require__(8569);
  * https://github.com/actions/toolkit
  * https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
  * https://octokit.github.io/rest.js/v18#repos
+ * https://github.com/micromatch/picomatch#options
  *
  */
 function fetchCodeowners(octokit, { owner, repo, ref }) {
@@ -81,7 +82,7 @@ function parseCodeownersPatterns(codeowners) {
 // Return files that do not match
 function filterMatches(filenames, patterns) {
     return filenames.filter(filename => {
-        const res = !(0, picomatch_1.isMatch)(filename, patterns);
+        const res = !(0, picomatch_1.isMatch)(filename, patterns, { dot: true });
         core.info(`check ${filename} against patterns ${patterns} -> ${res}`);
         return res;
     });
