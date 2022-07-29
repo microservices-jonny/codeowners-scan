@@ -44,11 +44,8 @@ function run() {
             // const octokit = github.getOctokit(token)
             let payload = github.context.payload;
             core.info(`HELLO, eventName: ${github.context.eventName}`);
-            if (github.context.eventName === 'push') {
+            if (github.context.eventName === 'pull_request') {
                 // https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
-                payload = payload;
-            }
-            else if (github.context.eventName === 'synchronize') {
                 payload = payload;
                 const afterSha = payload.after;
                 const pull_request = payload.pull_request;
