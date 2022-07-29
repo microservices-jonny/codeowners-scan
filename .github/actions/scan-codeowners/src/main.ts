@@ -14,9 +14,15 @@ import {
  * https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
  * https://octokit.github.io/rest.js/v18#repos
  * https://github.com/micromatch/picomatch#options
- *
+ * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
  */
 
+// TODO: Update PR with a comment that lists the unmatched files
+
+// TODO swithc picomatch for https://github.com/kaelzhang/node-ignore
+
+// TODO, catch (?) the 404 if the file doesn't exist
+// TODO: try multiple file locations as specified by github's docs
 async function fetchCodeowners(octokit, {owner, repo, ref}) {
   const result = await octokit.rest.repos.getContent({
     owner,
@@ -33,7 +39,6 @@ async function fetchCodeowners(octokit, {owner, repo, ref}) {
   }
 }
 
-// https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 function parseCodeowners(codeowners: string): [string, string][] {
   return codeowners
     .split('\n')
@@ -50,7 +55,8 @@ function parseCodeownersPatterns(codeowners: string): string[] {
   return parseCodeowners(codeowners).map(tuple => tuple[0])
 }
 
-// Return files that do not match
+// Returns files that do not match
+// TODO: make this use a matcher that's a closer look to github's
 function filterMatches(filenames: string[], patterns: string[]): string[] {
   return filenames.filter(filename => {
     const res = !isMatch(filename, patterns, {dot: true})
