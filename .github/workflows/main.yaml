@@ -9,6 +9,8 @@ jobs:
       # you must check out the repository
       - name: Checkout
         uses: actions/checkout@v3
+      - name: scan codeowners
+        uses: ./.github/actions/scan-codeowners
       - name: Hello world action step
         uses: ./.github/actions/basic
         id: hello
