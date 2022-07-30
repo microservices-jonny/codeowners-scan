@@ -122,6 +122,7 @@ function run() {
                 const patterns = parseCodeownersPatterns(codeowners);
                 core.info(`changed files: ${addedOrChangedFiles.join('\n')}`);
                 const unmatchedFiles = addedOrChangedFiles.filter(filename => !isPatternMatch(filename, patterns));
+                core.info(`${unmatchedFiles.length} files failed to match`);
                 for (const filename of unmatchedFiles) {
                     core.info(`Did not match: ${filename}`);
                 }
