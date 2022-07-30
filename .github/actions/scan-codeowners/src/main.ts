@@ -23,6 +23,7 @@ function isPatternMatch(filename: string, patterns: string[]): boolean {
  * https://octokit.github.io/rest.js/v18#repos
  * https://github.com/micromatch/picomatch#options
  * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+ * https://github.com/kaelzhang/node-ignore#usage
  */
 
 // TODO: Update PR with a comment that lists the unmatched files
