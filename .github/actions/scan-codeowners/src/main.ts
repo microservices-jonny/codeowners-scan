@@ -1,12 +1,20 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {isMatch} from 'picomatch'
+import ignore from 'ignore'
+
 import {
   PullRequest,
   PullRequestEvent,
   PullRequestSynchronizeEvent,
   PushEvent
 } from '@octokit/webhooks-definitions/schema'
+
+/*
+ * Whether the filename matches any of the passed patterns.
+ */
+function isPatternMatch(filename: string, patterns: string[]): boolean {
+  return ignore().add(patterns).ignores(filename)
+}
 
 /**
  * doc links
@@ -55,16 +63,6 @@ function parseCodeownersPatterns(codeowners: string): string[] {
   return parseCodeowners(codeowners).map(tuple => tuple[0])
 }
 
-// Returns files that do not match
-// TODO: make this use a matcher that's a closer look to github's
-function filterMatches(filenames: string[], patterns: string[]): string[] {
-  return filenames.filter(filename => {
-    const res = !isMatch(filename, patterns, {dot: true})
-    core.info(`check ${filename} against patterns ${patterns} -> ${res}`)
-    return res
-  })
-}
-
 async function run(): Promise<void> {
   try {
     const token = core.getInput('GITHUB_TOKEN')
@@ -96,7 +94,9 @@ async function run(): Promise<void> {
       core.info(`CONTENTS OF CODEOWNERS: ${codeowners}`)
       const patterns = parseCodeownersPatterns(codeowners)
       core.info(`changed files: ${addedOrChangedFiles.join('\n')}`)
-      const unmatchedFiles = filterMatches(addedOrChangedFiles, patterns)
+      const unmatchedFiles = addedOrChangedFiles.filter(
+        filename => !isPatternMatch(filename, patterns)
+      )
 
       for (const filename of unmatchedFiles) {
         core.info(`Did not match: ${filename}`)
