@@ -98,6 +98,7 @@ async function run(): Promise<void> {
         filename => !isPatternMatch(filename, patterns)
       )
 
+      core.info(`${unmatchedFiles.length} files failed to match`)
       for (const filename of unmatchedFiles) {
         core.info(`Did not match: ${filename}`)
       }
