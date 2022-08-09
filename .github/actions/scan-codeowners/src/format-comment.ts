@@ -23,13 +23,22 @@ type RenderContext = {
   sha: string
   unownedFiles: string[]
   uuid: string
+  createdAt: string
+  runDetails: RunDetails
 }
 
-export function toMarkdown(summary: Summary, {sha}: {sha: string}): string {
+type RunDetails = {id: number; url: string}
+
+export function toMarkdown(
+  summary: Summary,
+  {sha, runDetails}: {sha: string; runDetails: RunDetails}
+): string {
   const context: RenderContext = {
     sha,
     uuid: UUID,
-    unownedFiles: summary.unownedFiles
+    unownedFiles: summary.unownedFiles,
+    createdAt: new Date(Date.now()).toISOString(),
+    runDetails
   }
 
   const body = bodyTemplate(context)

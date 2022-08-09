@@ -100,6 +100,23 @@ async function findUnownedFiles(
   return unownedFiles
 }
 
+function getRunDetails(context: typeof github.context): {
+  id: number
+  url: string
+} {
+  const {
+    runId,
+    issue: {owner, repo}
+  } = context
+
+  const url = `https://github.com/${owner}/${repo}/actions/runs/${runId}`
+
+  return {
+    id: context.runId,
+    url
+  }
+}
+
 async function run(): Promise<void> {
   try {
     const token = core.getInput('GITHUB_TOKEN')
@@ -116,7 +133,8 @@ async function run(): Promise<void> {
       for (const filename of unownedFiles) {
         core.info(`Did not match: ${filename}`)
       }
-      const comment = toMarkdown({unownedFiles}, {sha: afterSha})
+      const runDetails = getRunDetails(github.context)
+      const comment = toMarkdown({unownedFiles}, {sha: afterSha, runDetails})
       await createOrUpdateComment(octokit, {pr, body: comment})
     }
 
