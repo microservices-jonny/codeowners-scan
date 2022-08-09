@@ -132,7 +132,7 @@ function toMarkdown(summary, { sha }) {
     };
     const body = bodyTemplate(context);
     const footer = footerTemplate(context);
-    return body + footer;
+    return `${body}\n\n${footer}`;
 }
 exports.toMarkdown = toMarkdown;
 
