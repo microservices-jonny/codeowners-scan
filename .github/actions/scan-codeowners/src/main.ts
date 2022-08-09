@@ -1,14 +1,12 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import ignore from 'ignore'
-
 import {
   PullRequest,
-  PullRequestEvent,
-  PullRequestSynchronizeEvent,
-  PushEvent
+  PullRequestEvent
 } from '@octokit/webhooks-definitions/schema'
-import {createOrUpdateComment} from './create-or-update-comment'
+import {UUID, createOrUpdateComment} from './create-or-update-comment'
+import ignore from 'ignore'
+import {toMarkdown} from './format-comment'
 
 /*
  * Whether the filename matches any of the passed patterns.
@@ -102,7 +100,8 @@ function formatComment(sha: string, unownedFiles: string[]): string {
     `Sha: ${sha} <br>`,
     `Count of files that are unowned: ${unownedFiles.length} <br>`,
     `<hr>`,
-    unownedFiles
+    unownedFiles,
+    `uuid ${UUID}`
   ]
     .flat()
     .join('\n')
@@ -124,7 +123,7 @@ async function run(): Promise<void> {
       for (const filename of unownedFiles) {
         core.info(`Did not match: ${filename}`)
       }
-      const comment = formatComment(afterSha, unownedFiles)
+      const comment = toMarkdown({unownedFiles}, {sha: afterSha})
       await createOrUpdateComment(octokit, {pr, body: comment})
     }
 
