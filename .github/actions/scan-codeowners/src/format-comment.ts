@@ -26,14 +26,14 @@ type RenderContext = {
 }
 
 export function toMarkdown(summary: Summary, {sha}: {sha: string}): string {
-  let context: RenderContext = {
+  const context: RenderContext = {
     sha,
     uuid: UUID,
     unownedFiles: summary.unownedFiles
   }
 
-  let body = bodyTemplate(context)
-  let footer = footerTemplate(context)
+  const body = bodyTemplate(context)
+  const footer = footerTemplate(context)
 
   return body + footer
 }

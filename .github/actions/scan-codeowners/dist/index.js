@@ -125,13 +125,13 @@ const bodyTemplate = handlebars.compile(templateFile);
 const footerTemplateFile = fs.readFileSync(path.join(__dirname, 'templates', 'summary-footer.hbs'), { encoding: 'utf8' });
 const footerTemplate = handlebars.compile(footerTemplateFile);
 function toMarkdown(summary, { sha }) {
-    let context = {
+    const context = {
         sha,
         uuid: create_or_update_comment_1.UUID,
         unownedFiles: summary.unownedFiles
     };
-    let body = bodyTemplate(context);
-    let footer = footerTemplate(context);
+    const body = bodyTemplate(context);
+    const footer = footerTemplate(context);
     return body + footer;
 }
 exports.toMarkdown = toMarkdown;
