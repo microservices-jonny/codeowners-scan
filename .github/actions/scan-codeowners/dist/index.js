@@ -1,6 +1,95 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ 8007:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createOrUpdateComment = exports.UUID = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const debug = (msg) => core.info(msg);
+// Random UUID used to identify the last comment added by this
+// action
+exports.UUID = '7c3ad8b6-5e14-433f-9613-d965d9587089';
+function doesCommentMatch(comment) {
+    var _a, _b;
+    return Boolean(((_a = comment.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && ((_b = comment.body) === null || _b === void 0 ? void 0 : _b.includes(exports.UUID)));
+}
+function getComment(octokit, { owner, repo, issue_number }, predicate = doesCommentMatch) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { data: comments } = yield octokit.rest.issues.listComments({
+            owner,
+            repo,
+            issue_number
+        });
+        return comments.find(predicate);
+    });
+}
+function createOrUpdateComment(octokit, { pr, body }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const owner = pr.base.repo.owner.login;
+        const repo = pr.base.repo.name;
+        const issue_number = pr.number;
+        const comment = yield getComment(octokit, {
+            owner,
+            repo,
+            issue_number
+        });
+        if (!comment) {
+            debug(`Found no comment, creating one`);
+            yield octokit.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body
+            });
+        }
+        else {
+            debug(`Found comment ${comment.id}, updating its body`);
+            yield octokit.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: comment.id,
+                body
+            });
+        }
+    });
+}
+exports.createOrUpdateComment = createOrUpdateComment;
+
+
+/***/ }),
+
 /***/ 3109:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -41,6 +130,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const ignore_1 = __importDefault(__nccwpck_require__(1230));
+const create_or_update_comment_1 = __nccwpck_require__(8007);
 /*
  * Whether the filename matches any of the passed patterns.
  */
@@ -117,6 +207,16 @@ function findUnownedFiles(octokit, { pr }) {
         return unownedFiles;
     });
 }
+function formatComment(sha, unownedFiles) {
+    return [
+        `Sha: ${sha} <br>`,
+        `Count of files that are unowned: ${unownedFiles.length} <br>`,
+        `<hr>`,
+        unownedFiles
+    ]
+        .flat()
+        .join('\n');
+}
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -133,6 +233,8 @@ function run() {
                 for (const filename of unownedFiles) {
                     core.info(`Did not match: ${filename}`);
                 }
+                const comment = formatComment(afterSha, unownedFiles);
+                yield (0, create_or_update_comment_1.createOrUpdateComment)(octokit, { pr, body: comment });
             }
             // https://github.com/actions/toolkit/tree/main/packages/core
             core.info(`before: ${payload.before} -> after ${payload.after}`);

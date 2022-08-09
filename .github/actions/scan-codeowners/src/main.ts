@@ -8,6 +8,7 @@ import {
   PullRequestSynchronizeEvent,
   PushEvent
 } from '@octokit/webhooks-definitions/schema'
+import {createOrUpdateComment} from './create-or-update-comment'
 
 /*
  * Whether the filename matches any of the passed patterns.
@@ -96,6 +97,17 @@ async function findUnownedFiles(
   return unownedFiles
 }
 
+function formatComment(sha: string, unownedFiles: string[]): string {
+  return [
+    `Sha: ${sha} <br>`,
+    `Count of files that are unowned: ${unownedFiles.length} <br>`,
+    `<hr>`,
+    unownedFiles
+  ]
+    .flat()
+    .join('\n')
+}
+
 async function run(): Promise<void> {
   try {
     const token = core.getInput('GITHUB_TOKEN')
@@ -112,6 +124,8 @@ async function run(): Promise<void> {
       for (const filename of unownedFiles) {
         core.info(`Did not match: ${filename}`)
       }
+      const comment = formatComment(afterSha, unownedFiles)
+      await createOrUpdateComment(octokit, {pr, body: comment})
     }
 
     // https://github.com/actions/toolkit/tree/main/packages/core
@@ -120,4 +134,5 @@ async function run(): Promise<void> {
     if (error instanceof Error) core.setFailed(error.message)
   }
 }
+
 run()
