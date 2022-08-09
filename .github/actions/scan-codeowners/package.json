@@ -5,12 +5,11 @@
   "description": "scans PRs for files that are not covered by codeowners",
   "main": "lib/main.js",
   "scripts": {
-    "build": "tsc && npm run copy:templates:lib",
+    "build": "tsc",
     "format": "prettier --write '**/*.ts'",
     "format-check": "prettier --check '**/*.ts'",
     "lint": "eslint src/**/*.ts",
     "package": "npm run build && ncc build --source-map --license licenses.txt && npm run copy:templates:dist",
-    "copy:templates:lib": "mkdir -p lib/templates && cp src/templates/* lib/templates/",
     "copy:templates:dist": "mkdir -p dist/templates && cp src/templates/* dist/templates/",
     "test": "jest",
     "all": "npm run build && npm run format && npm run lint && npm run package && npm test"

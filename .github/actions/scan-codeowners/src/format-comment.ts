@@ -35,5 +35,5 @@ export function toMarkdown(summary: Summary, {sha}: {sha: string}): string {
   const body = bodyTemplate(context)
   const footer = footerTemplate(context)
 
-  return body + footer
+  return `${body}\n\n${footer}`
 }
