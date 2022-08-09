@@ -18,6 +18,7 @@ function isPatternMatch(filename: string, patterns: string[]): boolean {
 
 /**
  * doc links
+ * https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
  * https://github.com/actions/toolkit
  * https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
  * https://octokit.github.io/rest.js/v18#repos
@@ -27,8 +28,6 @@ function isPatternMatch(filename: string, patterns: string[]): boolean {
  */
 
 // TODO: Update PR with a comment that lists the unmatched files
-
-// TODO swithc picomatch for https://github.com/kaelzhang/node-ignore
 
 // TODO, catch (?) the 404 if the file doesn't exist
 // TODO: try multiple file locations as specified by github's docs
@@ -64,6 +63,39 @@ function parseCodeownersPatterns(codeowners: string): string[] {
   return parseCodeowners(codeowners).map(tuple => tuple[0])
 }
 
+type MyOctokit = ReturnType<typeof github.getOctokit>
+
+async function findAddedOrChangedFiles(
+  octokit: MyOctokit,
+  {pr}: {pr: PullRequest}
+): Promise<string[]> {
+  const result = await octokit.rest.pulls.listFiles({
+    owner: pr.base.repo.owner.login,
+    repo: pr.base.repo.name,
+    pull_number: pr.number
+  })
+  return result.data
+    .filter(change => change.status !== 'removed')
+    .map(change => change.filename)
+}
+
+async function findUnownedFiles(
+  octokit: MyOctokit,
+  {pr}: {pr: PullRequest}
+): Promise<string[]> {
+  const changedFiles = await findAddedOrChangedFiles(octokit, {pr})
+  const codeowners = await fetchCodeowners(octokit, {
+    owner: pr.base.repo.owner.login,
+    repo: pr.base.repo.name,
+    ref: pr.base.ref
+  })
+  const patterns = parseCodeownersPatterns(codeowners)
+  const unownedFiles = changedFiles.filter(
+    filename => !isPatternMatch(filename, patterns)
+  )
+  return unownedFiles
+}
+
 async function run(): Promise<void> {
   try {
     const token = core.getInput('GITHUB_TOKEN')
@@ -72,35 +104,12 @@ async function run(): Promise<void> {
     let payload = github.context.payload
     core.info(`HELLO, eventName: ${github.context.eventName}`)
     if (github.context.eventName === 'pull_request') {
-      // https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
       payload = payload as PullRequestEvent
       const afterSha = payload.after
-      const pull_request = payload.pull_request as PullRequest
-      const baseSha = pull_request.base.sha
-      core.info(`HELLO baseRef: ${baseSha}, afterSha ${afterSha}`)
-      const result = await octokit.rest.pulls.listFiles({
-        owner: pull_request.base.repo.owner.login,
-        repo: pull_request.base.repo.name,
-        pull_number: pull_request.number
-      })
-      const addedOrChangedFiles = result.data
-        .filter(change => change.status !== 'removed')
-        .map(change => change.filename)
-
-      const codeowners = await fetchCodeowners(octokit, {
-        owner: pull_request.base.repo.owner.login,
-        repo: pull_request.base.repo.name,
-        ref: pull_request.base.ref
-      })
-      core.info(`CONTENTS OF CODEOWNERS: ${codeowners}`)
-      const patterns = parseCodeownersPatterns(codeowners)
-      core.info(`changed files: ${addedOrChangedFiles.join('\n')}`)
-      const unmatchedFiles = addedOrChangedFiles.filter(
-        filename => !isPatternMatch(filename, patterns)
-      )
-
-      core.info(`${unmatchedFiles.length} files failed to match`)
-      for (const filename of unmatchedFiles) {
+      const pr = payload.pull_request as PullRequest
+      const unownedFiles = await findUnownedFiles(octokit, {pr})
+      core.info(`${unownedFiles.length} files failed to match`)
+      for (const filename of unownedFiles) {
         core.info(`Did not match: ${filename}`)
       }
     }
@@ -111,5 +120,4 @@ async function run(): Promise<void> {
     if (error instanceof Error) core.setFailed(error.message)
   }
 }
-
 run()

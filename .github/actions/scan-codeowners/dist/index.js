@@ -49,14 +49,15 @@ function isPatternMatch(filename, patterns) {
 }
 /**
  * doc links
+ * https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
  * https://github.com/actions/toolkit
  * https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
  * https://octokit.github.io/rest.js/v18#repos
  * https://github.com/micromatch/picomatch#options
  * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+ * https://github.com/kaelzhang/node-ignore#usage
  */
 // TODO: Update PR with a comment that lists the unmatched files
-// TODO swithc picomatch for https://github.com/kaelzhang/node-ignore
 // TODO, catch (?) the 404 if the file doesn't exist
 // TODO: try multiple file locations as specified by github's docs
 function fetchCodeowners(octokit, { owner, repo, ref }) {
@@ -91,6 +92,31 @@ function parseCodeowners(codeowners) {
 function parseCodeownersPatterns(codeowners) {
     return parseCodeowners(codeowners).map(tuple => tuple[0]);
 }
+function findAddedOrChangedFiles(octokit, { pr }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const result = yield octokit.rest.pulls.listFiles({
+            owner: pr.base.repo.owner.login,
+            repo: pr.base.repo.name,
+            pull_number: pr.number
+        });
+        return result.data
+            .filter(change => change.status !== 'removed')
+            .map(change => change.filename);
+    });
+}
+function findUnownedFiles(octokit, { pr }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const changedFiles = yield findAddedOrChangedFiles(octokit, { pr });
+        const codeowners = yield fetchCodeowners(octokit, {
+            owner: pr.base.repo.owner.login,
+            repo: pr.base.repo.name,
+            ref: pr.base.ref
+        });
+        const patterns = parseCodeownersPatterns(codeowners);
+        const unownedFiles = changedFiles.filter(filename => !isPatternMatch(filename, patterns));
+        return unownedFiles;
+    });
+}
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -99,31 +125,12 @@ function run() {
             let payload = github.context.payload;
             core.info(`HELLO, eventName: ${github.context.eventName}`);
             if (github.context.eventName === 'pull_request') {
-                // https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
                 payload = payload;
                 const afterSha = payload.after;
-                const pull_request = payload.pull_request;
-                const baseSha = pull_request.base.sha;
-                core.info(`HELLO baseRef: ${baseSha}, afterSha ${afterSha}`);
-                const result = yield octokit.rest.pulls.listFiles({
-                    owner: pull_request.base.repo.owner.login,
-                    repo: pull_request.base.repo.name,
-                    pull_number: pull_request.number
-                });
-                const addedOrChangedFiles = result.data
-                    .filter(change => change.status !== 'removed')
-                    .map(change => change.filename);
-                const codeowners = yield fetchCodeowners(octokit, {
-                    owner: pull_request.base.repo.owner.login,
-                    repo: pull_request.base.repo.name,
-                    ref: pull_request.base.ref
-                });
-                core.info(`CONTENTS OF CODEOWNERS: ${codeowners}`);
-                const patterns = parseCodeownersPatterns(codeowners);
-                core.info(`changed files: ${addedOrChangedFiles.join('\n')}`);
-                const unmatchedFiles = addedOrChangedFiles.filter(filename => !isPatternMatch(filename, patterns));
-                core.info(`${unmatchedFiles.length} files failed to match`);
-                for (const filename of unmatchedFiles) {
+                const pr = payload.pull_request;
+                const unownedFiles = yield findUnownedFiles(octokit, { pr });
+                core.info(`${unownedFiles.length} files failed to match`);
+                for (const filename of unownedFiles) {
                     core.info(`Did not match: ${filename}`);
                 }
             }
