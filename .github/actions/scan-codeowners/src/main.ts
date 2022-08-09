@@ -73,9 +73,14 @@ async function findAddedOrChangedFiles(
     repo: pr.base.repo.name,
     pull_number: pr.number
   })
-  return result.data
+  const changedFiles = result.data
     .filter(change => change.status !== 'removed')
     .map(change => change.filename)
+  core.info(`findAddedOrChangedFiles found ${changedFiles.length}`)
+  for (const file of changedFiles) {
+    core.info(`findAddedOrChangedFiles: file changed: ${file}`)
+  }
+  return changedFiles
 }
 
 async function findUnownedFiles(
@@ -93,18 +98,6 @@ async function findUnownedFiles(
     filename => !isPatternMatch(filename, patterns)
   )
   return unownedFiles
-}
-
-function formatComment(sha: string, unownedFiles: string[]): string {
-  return [
-    `Sha: ${sha} <br>`,
-    `Count of files that are unowned: ${unownedFiles.length} <br>`,
-    `<hr>`,
-    unownedFiles,
-    `uuid ${UUID}`
-  ]
-    .flat()
-    .join('\n')
 }
 
 async function run(): Promise<void> {
