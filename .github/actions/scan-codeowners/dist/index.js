@@ -268,7 +268,7 @@ function run() {
             const token = core.getInput('GITHUB_TOKEN');
             const octokit = github.getOctokit(token);
             let payload = github.context.payload;
-            core.info(`HELLO, eventName: ${github.context.eventName}`);
+            core.info(`HELLO v2, eventName: ${github.context.eventName}`);
             if (github.context.eventName === 'pull_request') {
                 payload = payload;
                 const afterSha = payload.after;

@@ -106,7 +106,7 @@ async function run(): Promise<void> {
     const octokit = github.getOctokit(token)
 
     let payload = github.context.payload
-    core.info(`HELLO, eventName: ${github.context.eventName}`)
+    core.info(`HELLO v2, eventName: ${github.context.eventName}`)
     if (github.context.eventName === 'pull_request') {
       payload = payload as PullRequestEvent
       const afterSha = payload.after
