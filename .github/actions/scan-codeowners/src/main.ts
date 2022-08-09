@@ -28,6 +28,7 @@ function isPatternMatch(filename: string, patterns: string[]): boolean {
 
 // TODO, catch (?) the 404 if the file doesn't exist
 // TODO: try multiple file locations as specified by github's docs
+// TODO: coalesce unowned files to shared paths. Ie if /path/to/a.txt and /path/to/b.txt, can just print `/path/to/*` had unowned files
 async function fetchCodeowners(octokit, {owner, repo, ref}) {
   const result = await octokit.rest.repos.getContent({
     owner,
