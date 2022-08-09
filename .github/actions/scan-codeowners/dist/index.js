@@ -124,11 +124,13 @@ const templateFile = fs.readFileSync(path.join(__dirname, 'templates', 'summary.
 const bodyTemplate = handlebars.compile(templateFile);
 const footerTemplateFile = fs.readFileSync(path.join(__dirname, 'templates', 'summary-footer.hbs'), { encoding: 'utf8' });
 const footerTemplate = handlebars.compile(footerTemplateFile);
-function toMarkdown(summary, { sha }) {
+function toMarkdown(summary, { sha, runDetails }) {
     const context = {
         sha,
         uuid: create_or_update_comment_1.UUID,
-        unownedFiles: summary.unownedFiles
+        unownedFiles: summary.unownedFiles,
+        createdAt: new Date(Date.now()).toISOString(),
+        runDetails
     };
     const body = bodyTemplate(context);
     const footer = footerTemplate(context);
@@ -197,7 +199,6 @@ function isPatternMatch(filename, patterns) {
  * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
  * https://github.com/kaelzhang/node-ignore#usage
  */
-// TODO: Update PR with a comment that lists the unmatched files
 // TODO, catch (?) the 404 if the file doesn't exist
 // TODO: try multiple file locations as specified by github's docs
 function fetchCodeowners(octokit, { owner, repo, ref }) {
@@ -262,6 +263,14 @@ function findUnownedFiles(octokit, { pr }) {
         return unownedFiles;
     });
 }
+function getRunDetails(context) {
+    const { runId, issue: { owner, repo } } = context;
+    const url = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+    return {
+        id: context.runId,
+        url
+    };
+}
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -278,7 +287,8 @@ function run() {
                 for (const filename of unownedFiles) {
                     core.info(`Did not match: ${filename}`);
                 }
-                const comment = (0, format_comment_1.toMarkdown)({ unownedFiles }, { sha: afterSha });
+                const runDetails = getRunDetails(github.context);
+                const comment = (0, format_comment_1.toMarkdown)({ unownedFiles }, { sha: afterSha, runDetails });
                 yield (0, create_or_update_comment_1.createOrUpdateComment)(octokit, { pr, body: comment });
             }
             // https://github.com/actions/toolkit/tree/main/packages/core

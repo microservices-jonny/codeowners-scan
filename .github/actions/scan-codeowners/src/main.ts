@@ -26,8 +26,6 @@ function isPatternMatch(filename: string, patterns: string[]): boolean {
  * https://github.com/kaelzhang/node-ignore#usage
  */
 
-// TODO: Update PR with a comment that lists the unmatched files
-
 // TODO, catch (?) the 404 if the file doesn't exist
 // TODO: try multiple file locations as specified by github's docs
 async function fetchCodeowners(octokit, {owner, repo, ref}) {
