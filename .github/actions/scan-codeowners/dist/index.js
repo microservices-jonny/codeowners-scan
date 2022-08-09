@@ -239,9 +239,14 @@ function findAddedOrChangedFiles(octokit, { pr }) {
             repo: pr.base.repo.name,
             pull_number: pr.number
         });
-        return result.data
+        const changedFiles = result.data
             .filter(change => change.status !== 'removed')
             .map(change => change.filename);
+        core.info(`findAddedOrChangedFiles found ${changedFiles.length}`);
+        for (const file of changedFiles) {
+            core.info(`findAddedOrChangedFiles: file changed: ${file}`);
+        }
+        return changedFiles;
     });
 }
 function findUnownedFiles(octokit, { pr }) {
@@ -256,17 +261,6 @@ function findUnownedFiles(octokit, { pr }) {
         const unownedFiles = changedFiles.filter(filename => !isPatternMatch(filename, patterns));
         return unownedFiles;
     });
-}
-function formatComment(sha, unownedFiles) {
-    return [
-        `Sha: ${sha} <br>`,
-        `Count of files that are unowned: ${unownedFiles.length} <br>`,
-        `<hr>`,
-        unownedFiles,
-        `uuid ${create_or_update_comment_1.UUID}`
-    ]
-        .flat()
-        .join('\n');
 }
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
