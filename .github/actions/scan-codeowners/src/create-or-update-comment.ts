@@ -52,9 +52,9 @@ export async function createOrUpdateComment(
       issue_number,
       body
     })
-    debug(`Created comment with id: ${result.data.id}`)
+    debug(`Created comment with id %o`, result.data.id)
   } else {
-    debug(`Found comment ${comment.id}, updating its body`)
+    debug(`Found comment %o, updating its body`, comment.id)
     await octokit.rest.issues.updateComment({
       owner,
       repo,
