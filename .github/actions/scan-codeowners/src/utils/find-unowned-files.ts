@@ -1,4 +1,3 @@
-import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {isSomePatternMatch, fetchCodeownersPatterns} from './codeowners'
 import {MyOctokit} from './types'
@@ -50,11 +49,7 @@ async function findAddedOrChangedFiles(
     pull_number: pr.number
   })
   const allChanges = result.data
-  debug(
-    `found %o changed files. First 100 changed files: %O`,
-    allChanges.length,
-    allChanges.map(change => change.filename).slice(0, 100)
-  )
+  debug(`found %o changed files.`, allChanges.length)
   const addedOrChanged = allChanges
     .filter(change => change.status !== 'removed')
     .map(change => change.filename)

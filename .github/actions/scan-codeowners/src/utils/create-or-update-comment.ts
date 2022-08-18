@@ -1,7 +1,9 @@
-import {MyOctokit} from './utils/types'
+import {MyOctokit} from './types'
 import {PullRequest} from '@octokit/webhooks-definitions/schema'
-import {UUID} from './utils/constants'
-import debug from './utils/debug'
+import {UUID} from './constants'
+import debugBase from './debug'
+
+const debug = debugBase.extend('create-or-update-comment')
 
 interface GithubComment {
   id: number

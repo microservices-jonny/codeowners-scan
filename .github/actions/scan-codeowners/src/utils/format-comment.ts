@@ -1,7 +1,7 @@
 import * as handlebars from 'handlebars'
 import * as fs from 'fs'
 import * as path from 'path'
-import {UUID} from './utils/constants'
+import {UUID} from './constants'
 
 const templateFile = fs.readFileSync(
   path.join(__dirname, 'templates', 'summary.hbs'),
