@@ -1,5 +1,8 @@
 import ignore from 'ignore'
 import {MyOctokit} from './types'
+import debugBase from './debug'
+
+const debug = debugBase.extend('codeowners-file')
 
 /*
  * Whether the filename matches one of the passed patterns.
@@ -50,9 +53,11 @@ async function fetchFile(
     ref,
     path
   })
+  debug(`fetched file %o`, path)
   const data = result.data as unknown as {content: string}
   const content = data.content || ''
   if (content) {
+    debug(`fetched file %o`, path)
     const encoded = Buffer.from(content, 'base64')
     const decoded = encoded.toString('utf8')
     return decoded
