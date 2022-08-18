@@ -1,12 +1,8 @@
 import * as core from '@actions/core'
-import * as github from '@actions/github'
+import {MyOctokit} from './utils/types'
 import {PullRequest} from '@octokit/webhooks-definitions/schema'
-
-const debug = (msg: string): void => core.info(msg)
-
-// Random UUID used to identify the last comment added by this
-// action
-export const UUID = '7c3ad8b6-5e14-433f-9613-d965d9587089'
+import {UUID} from './utils/constants'
+import debug from './utils/debug'
 
 interface GithubComment {
   id: number
@@ -14,26 +10,22 @@ interface GithubComment {
   body?: string
 }
 
-type MyOctokit = ReturnType<typeof github.getOctokit>
-
-function doesCommentMatch(comment: GithubComment): boolean {
-  return Boolean(comment.user?.type === 'Bot' && comment.body?.includes(UUID))
-}
-
-async function getComment(
+async function findExistingComment(
   octokit: MyOctokit,
   {
     owner,
     repo,
     issue_number
-  }: {owner: string; repo: string; issue_number: number},
-  predicate = doesCommentMatch
+  }: {owner: string; repo: string; issue_number: number}
 ): Promise<GithubComment | undefined> {
   const {data: comments} = await octokit.rest.issues.listComments({
     owner,
     repo,
     issue_number
   })
+
+  const predicate = (comment: GithubComment): boolean =>
+    Boolean(comment.user?.type === 'Bot' && comment.body?.includes(UUID))
 
   return comments.find(predicate)
 }
@@ -46,7 +38,7 @@ export async function createOrUpdateComment(
   const repo = pr.base.repo.name
   const issue_number = pr.number
 
-  const comment = await getComment(octokit, {
+  const comment = await findExistingComment(octokit, {
     owner,
     repo,
     issue_number
@@ -54,12 +46,13 @@ export async function createOrUpdateComment(
 
   if (!comment) {
     debug(`Found no comment, creating one`)
-    await octokit.rest.issues.createComment({
+    const result = await octokit.rest.issues.createComment({
       owner,
       repo,
       issue_number,
       body
     })
+    debug(`Created comment with id: ${result.data.id}`)
   } else {
     debug(`Found comment ${comment.id}, updating its body`)
     await octokit.rest.issues.updateComment({

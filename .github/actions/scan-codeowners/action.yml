@@ -1,10 +1,14 @@
 name: 'Scan Codeowners'
-description: 'Scans changes against codeowners'
+description: 'Scans PR changed files against codeowners'
 author: 'Cory Forsyth'
 inputs:
   GITHUB_TOKEN:
     required: true
-    description: 'input description here'
+    description: 'github token'
+  enable-debug-log:
+    required: false
+    description: 'debug logging is enabled when the value is "true"'
+    default: "true"
 runs:
   using: 'node16'
   main: 'dist/index.js'

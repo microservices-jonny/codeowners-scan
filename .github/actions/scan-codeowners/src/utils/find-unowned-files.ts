@@ -1,8 +1,15 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {isPatternMatch, parseCodeownersPatterns} from './main'
-import {MyOctokit} from './utils/types'
+import {
+  isSomePatternMatch,
+  parseCodeownersPatterns,
+  fetchCodeownersPatterns
+} from './codeowners'
+import {MyOctokit} from './types'
 import {PullRequest} from '@octokit/webhooks-definitions/schema'
+import {debugBase} from './debug'
+
+const debug = debugBase.extend('fetch-codeowners')
 
 /**
  * doc links
@@ -13,29 +20,6 @@ import {PullRequest} from '@octokit/webhooks-definitions/schema'
  * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
  * https://github.com/kaelzhang/node-ignore#usage
  */
-// TODO, catch (?) the 404 if the file doesn't exist
-// TODO: try multiple file locations as specified by github's docs
-// TODO: coalesce unowned files to shared paths. Ie if /path/to/a.txt and /path/to/b.txt, can just print `/path/to/*` had unowned files
-async function fetchCodeowners(
-  octokit: MyOctokit,
-  {owner, repo, ref}
-): Promise<string> {
-  const result = await octokit.rest.repos.getContent({
-    owner,
-    repo,
-    ref,
-    path: 'CODEOWNERS'
-  })
-  const data = result.data as unknown as {content: string}
-  const content = data.content || ''
-  if (content) {
-    const encoded = Buffer.from(content, 'base64')
-    const decoded = encoded.toString('utf8')
-    return decoded
-  } else {
-    return ''
-  }
-}
 
 export async function findUnownedFiles(
   token: string,
@@ -43,14 +27,13 @@ export async function findUnownedFiles(
 ): Promise<string[]> {
   const octokit = github.getOctokit(token)
   const changedFiles = await findAddedOrChangedFiles(octokit, {pr})
-  const codeowners = await fetchCodeowners(octokit, {
+  const patterns = await fetchCodeownersPatterns(octokit, {
     owner: pr.base.repo.owner.login,
     repo: pr.base.repo.name,
     ref: pr.base.ref
   })
-  const patterns = parseCodeownersPatterns(codeowners)
   const unownedFiles = changedFiles.filter(
-    filename => !isPatternMatch(filename, patterns)
+    filename => !isSomePatternMatch(filename, patterns)
   )
   return unownedFiles
 }

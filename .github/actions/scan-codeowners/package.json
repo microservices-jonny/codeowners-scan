@@ -29,10 +29,12 @@
     "@actions/core": "^1.6.0",
     "@actions/github": "^5.0.3",
     "@octokit/webhooks-definitions": "^3.67.3",
+    "debug": "^4.3.4",
     "handlebars": "^4.7.7",
     "ignore": "^5.2.0"
   },
   "devDependencies": {
+    "@types/debug": "^4.1.7",
     "@types/node": "^18.7.6",
     "@typescript-eslint/parser": "^5.33.1",
     "@vercel/ncc": "^0.34.0",
