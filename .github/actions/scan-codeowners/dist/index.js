@@ -178,6 +178,7 @@ function run() {
             if (enableDebugLog) {
                 (0, debug_1.enableDebugging)();
                 core.info('ENABLE DEBUGGING');
+                process.env['DEBUG'] = 'codeowners-scan:*';
                 // debug.log = (...args) => console.log(...args) // eslint-disable-line no-console
             }
             let payload = github.context.payload;
@@ -360,13 +361,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findUnownedFiles = void 0;
-const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const codeowners_1 = __nccwpck_require__(4702);
-// import debugBase from './debug'
-// const debug = debugBase.extend('fetch-codeowners')
+const debug_1 = __importDefault(__nccwpck_require__(0));
+const debug = debug_1.default.extend('fetch-codeowners');
 /**
  * doc links
  * https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
@@ -397,14 +400,13 @@ function findAddedOrChangedFiles(octokit, { pr }) {
             repo: pr.base.repo.name,
             pull_number: pr.number
         });
-        const changedFiles = result.data
+        const allChanges = result.data;
+        debug(`found %o changed files. First 100 changed files: %o`, allChanges.length, allChanges.map(change => change.filename).slice(0, 100));
+        const addedOrChanged = allChanges
             .filter(change => change.status !== 'removed')
             .map(change => change.filename);
-        core.info(`findAddedOrChangedFiles found ${changedFiles.length}`);
-        for (const file of changedFiles) {
-            core.info(`findAddedOrChangedFiles: file changed: ${file}`);
-        }
-        return changedFiles;
+        debug(`after filtering out removed files, found %o added-or-changed. first 100: %o`, addedOrChanged.length, addedOrChanged.slice(0, 100));
+        return addedOrChanged;
     });
 }
 
