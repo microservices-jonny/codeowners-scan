@@ -312,49 +312,26 @@ exports.UUID = '7c3ad8b6-5e14-433f-9613-d965d9587089';
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.enableDebugging = void 0;
-const core = __importStar(__nccwpck_require__(2186));
+// import * as core from '@actions/core'
 const debug_1 = __importDefault(__nccwpck_require__(8237));
 const NAME = 'codeowners-scan';
 const debug = (0, debug_1.default)(NAME);
 function enableDebugging() {
-    const debugEnv = process.env['DEBUG'];
-    if (debugEnv !== '') {
-        core.info(`appending DEBUG env`);
-        process.env['DEBUG'] = `${debugEnv},${NAME}:*`;
-    }
-    else {
-        core.info(`setting DEBUG env`);
-        process.env['DEBUG'] = `${NAME}:*`;
-    }
-    core.info(`debug env: ${process.env['DEBUG']}`);
+    debug_1.default.enable(`${NAME}:*`);
+    // const debugEnv = process.env['DEBUG']
+    // if (debugEnv !== '') {
+    //   core.info(`appending DEBUG env`)
+    //   process.env['DEBUG'] = `${debugEnv},${NAME}:*`
+    // } else {
+    //   core.info(`setting DEBUG env`)
+    //   process.env['DEBUG'] = `${NAME}:*`
+    // }
+    // core.info(`debug env: ${process.env['DEBUG']}`)
 }
 exports.enableDebugging = enableDebugging;
 exports["default"] = debug;
