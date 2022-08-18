@@ -178,7 +178,6 @@ function run() {
             if (enableDebugLog) {
                 (0, debug_1.enableDebugging)();
                 core.info('ENABLE DEBUGGING');
-                process.env['DEBUG'] = 'codeowners-scan:*';
                 // debug.log = (...args) => console.log(...args) // eslint-disable-line no-console
             }
             let payload = github.context.payload;
@@ -316,7 +315,13 @@ const debug_1 = __importDefault(__nccwpck_require__(8237));
 const NAME = 'codeowners-scan';
 const debug = (0, debug_1.default)(NAME);
 function enableDebugging() {
-    debug_1.default.enable(`${NAME}:*`);
+    const debugEnv = process.env['DEBUG'];
+    if (debugEnv) {
+        process.env['DEBUG'] = `${debugEnv},${NAME}:*`;
+    }
+    else {
+        process.env['DEBUG'] = `${NAME}:*`;
+    }
 }
 exports.enableDebugging = enableDebugging;
 exports["default"] = debug;
@@ -389,6 +394,7 @@ function findUnownedFiles(token, { pr }) {
             ref: pr.base.ref
         });
         const unownedFiles = changedFiles.filter(filename => !(0, codeowners_1.isSomePatternMatch)(filename, patterns));
+        debug(`filtered %o changed files to %o unownedFiles. first 100 unowned: %O`, changedFiles.length, unownedFiles.length, unownedFiles.slice(0, 100));
         return unownedFiles;
     });
 }
@@ -401,11 +407,11 @@ function findAddedOrChangedFiles(octokit, { pr }) {
             pull_number: pr.number
         });
         const allChanges = result.data;
-        debug(`found %o changed files. First 100 changed files: %o`, allChanges.length, allChanges.map(change => change.filename).slice(0, 100));
+        debug(`found %o changed files. First 100 changed files: %O`, allChanges.length, allChanges.map(change => change.filename).slice(0, 100));
         const addedOrChanged = allChanges
             .filter(change => change.status !== 'removed')
             .map(change => change.filename);
-        debug(`after filtering out removed files, found %o added-or-changed. first 100: %o`, addedOrChanged.length, addedOrChanged.slice(0, 100));
+        debug(`after filtering out removed files, found %o added-or-changed. first 100: %O`, addedOrChanged.length, addedOrChanged.slice(0, 100));
         return addedOrChanged;
     });
 }
