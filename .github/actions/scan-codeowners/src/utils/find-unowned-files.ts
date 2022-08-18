@@ -31,6 +31,12 @@ export async function findUnownedFiles(
   const unownedFiles = changedFiles.filter(
     filename => !isSomePatternMatch(filename, patterns)
   )
+  debug(
+    `filtered %o changed files to %o unownedFiles. first 100 unowned: %O`,
+    changedFiles.length,
+    unownedFiles.length,
+    unownedFiles.slice(0, 100)
+  )
   return unownedFiles
 }
 
@@ -45,7 +51,7 @@ async function findAddedOrChangedFiles(
   })
   const allChanges = result.data
   debug(
-    `found %o changed files. First 100 changed files: %o`,
+    `found %o changed files. First 100 changed files: %O`,
     allChanges.length,
     allChanges.map(change => change.filename).slice(0, 100)
   )
@@ -53,7 +59,7 @@ async function findAddedOrChangedFiles(
     .filter(change => change.status !== 'removed')
     .map(change => change.filename)
   debug(
-    `after filtering out removed files, found %o added-or-changed. first 100: %o`,
+    `after filtering out removed files, found %o added-or-changed. first 100: %O`,
     addedOrChanged.length,
     addedOrChanged.slice(0, 100)
   )

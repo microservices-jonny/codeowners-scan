@@ -19,7 +19,6 @@ async function run(): Promise<void> {
     if (enableDebugLog) {
       enableDebugging()
       core.info('ENABLE DEBUGGING')
-      process.env['DEBUG'] = 'codeowners-scan:*'
       // debug.log = (...args) => console.log(...args) // eslint-disable-line no-console
     }
 
