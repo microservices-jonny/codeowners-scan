@@ -258,7 +258,9 @@ function fetchCodeownersPatterns(octokit, { owner, repo, ref }) {
             ref,
             path: 'CODEOWNERS'
         });
-        return parseCodeownersPatterns(codeowners);
+        const patterns = parseCodeownersPatterns(codeowners);
+        debug(`Found %o codeowners patterns`, patterns.length);
+        return patterns;
     });
 }
 exports.fetchCodeownersPatterns = fetchCodeownersPatterns;
@@ -270,16 +272,16 @@ function fetchFile(octokit, { owner, repo, ref, path }) {
             ref,
             path
         });
-        debug(`fetched file %o`, path);
+        debug(`fetching file at path %o`, path);
         const data = result.data;
         const content = data.content || '';
         if (content) {
-            debug(`fetched file %o`, path);
             const encoded = Buffer.from(content, 'base64');
             const decoded = encoded.toString('utf8');
             return decoded;
         }
         else {
+            debug(`file was empty or missing at path %o`, path);
             return '';
         }
     });
@@ -351,8 +353,8 @@ function enableDebugging() {
     else {
         core.info(`setting DEBUG env`);
         process.env['DEBUG'] = `${NAME}:*`;
-        core.info(`debug env: ${process.env['DEBUG']}`);
     }
+    core.info(`debug env: ${process.env['DEBUG']}`);
 }
 exports.enableDebugging = enableDebugging;
 exports["default"] = debug;
