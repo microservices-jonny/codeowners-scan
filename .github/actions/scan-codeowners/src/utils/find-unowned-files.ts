@@ -1,15 +1,11 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {
-  isSomePatternMatch,
-  parseCodeownersPatterns,
-  fetchCodeownersPatterns
-} from './codeowners'
+import {isSomePatternMatch, fetchCodeownersPatterns} from './codeowners'
 import {MyOctokit} from './types'
 import {PullRequest} from '@octokit/webhooks-definitions/schema'
-import {debugBase} from './debug'
+// import debugBase from './debug'
 
-const debug = debugBase.extend('fetch-codeowners')
+// const debug = debugBase.extend('fetch-codeowners')
 
 /**
  * doc links
