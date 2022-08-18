@@ -3,9 +3,9 @@ import * as github from '@actions/github'
 import {isSomePatternMatch, fetchCodeownersPatterns} from './codeowners'
 import {MyOctokit} from './types'
 import {PullRequest} from '@octokit/webhooks-definitions/schema'
-// import debugBase from './debug'
+import debugBase from './debug'
 
-// const debug = debugBase.extend('fetch-codeowners')
+const debug = debugBase.extend('fetch-codeowners')
 
 /**
  * doc links
@@ -43,12 +43,19 @@ async function findAddedOrChangedFiles(
     repo: pr.base.repo.name,
     pull_number: pr.number
   })
-  const changedFiles = result.data
+  const allChanges = result.data
+  debug(
+    `found %o changed files. First 100 changed files: %o`,
+    allChanges.length,
+    allChanges.map(change => change.filename).slice(0, 100)
+  )
+  const addedOrChanged = allChanges
     .filter(change => change.status !== 'removed')
     .map(change => change.filename)
-  core.info(`findAddedOrChangedFiles found ${changedFiles.length}`)
-  for (const file of changedFiles) {
-    core.info(`findAddedOrChangedFiles: file changed: ${file}`)
-  }
-  return changedFiles
+  debug(
+    `after filtering out removed files, found %o added-or-changed. first 100: %o`,
+    addedOrChanged.length,
+    addedOrChanged.slice(0, 100)
+  )
+  return addedOrChanged
 }
