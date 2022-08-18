@@ -1,129 +1,6 @@
 require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 8007:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createOrUpdateComment = void 0;
-const constants_1 = __nccwpck_require__(2842);
-const debug_1 = __importDefault(__nccwpck_require__(0));
-function findExistingComment(octokit, { owner, repo, issue_number }) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const { data: comments } = yield octokit.rest.issues.listComments({
-            owner,
-            repo,
-            issue_number
-        });
-        const predicate = (comment) => { var _a, _b; return Boolean(((_a = comment.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && ((_b = comment.body) === null || _b === void 0 ? void 0 : _b.includes(constants_1.UUID))); };
-        return comments.find(predicate);
-    });
-}
-function createOrUpdateComment(octokit, { pr, body }) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const owner = pr.base.repo.owner.login;
-        const repo = pr.base.repo.name;
-        const issue_number = pr.number;
-        const comment = yield findExistingComment(octokit, {
-            owner,
-            repo,
-            issue_number
-        });
-        if (!comment) {
-            (0, debug_1.default)(`Found no comment, creating one`);
-            const result = yield octokit.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body
-            });
-            (0, debug_1.default)(`Created comment with id %o`, result.data.id);
-        }
-        else {
-            (0, debug_1.default)(`Found comment %o, updating its body`, comment.id);
-            yield octokit.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: comment.id,
-                body
-            });
-        }
-    });
-}
-exports.createOrUpdateComment = createOrUpdateComment;
-
-
-/***/ }),
-
-/***/ 4731:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.toMarkdown = void 0;
-const handlebars = __importStar(__nccwpck_require__(7492));
-const fs = __importStar(__nccwpck_require__(7147));
-const path = __importStar(__nccwpck_require__(1017));
-const constants_1 = __nccwpck_require__(2842);
-const templateFile = fs.readFileSync(path.join(__dirname, 'templates', 'summary.hbs'), { encoding: 'utf8' });
-const bodyTemplate = handlebars.compile(templateFile);
-const footerTemplateFile = fs.readFileSync(path.join(__dirname, 'templates', 'summary-footer.hbs'), { encoding: 'utf8' });
-const footerTemplate = handlebars.compile(footerTemplateFile);
-function toMarkdown(summary, { sha, runDetails }) {
-    const context = {
-        sha,
-        uuid: constants_1.UUID,
-        unownedFiles: summary.unownedFiles,
-        createdAt: new Date(Date.now()).toISOString(),
-        runDetails
-    };
-    const body = bodyTemplate(context);
-    const footer = footerTemplate(context);
-    return `${body}\n\n${footer}`;
-}
-exports.toMarkdown = toMarkdown;
-
-
-/***/ }),
-
 /***/ 3109:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -164,10 +41,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
-const create_or_update_comment_1 = __nccwpck_require__(8007);
+const create_or_update_comment_1 = __nccwpck_require__(478);
 const find_unowned_files_1 = __nccwpck_require__(2409);
 const get_run_details_1 = __nccwpck_require__(7352);
-const format_comment_1 = __nccwpck_require__(4731);
+const format_comment_1 = __nccwpck_require__(2372);
 const debug_1 = __nccwpck_require__(0);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -175,26 +52,29 @@ function run() {
             const token = core.getInput('GITHUB_TOKEN');
             const octokit = github.getOctokit(token);
             const enableDebugLog = core.getInput('enable-debug-log');
-            if (enableDebugLog) {
+            if (enableDebugLog === 'true') {
                 (0, debug_1.enableDebugging)();
-                core.info('ENABLE DEBUGGING');
-                // debug.log = (...args) => console.log(...args) // eslint-disable-line no-console
+                core.info('Debug log enabled');
+            }
+            else {
+                core.info('Debug log not enabled');
             }
             let payload = github.context.payload;
-            core.info(`HELLO v3, eventName: ${github.context.eventName}`);
-            if (github.context.eventName === 'pull_request') {
-                payload = payload;
-                const afterSha = payload.after;
-                const pr = payload.pull_request;
-                const unownedFiles = yield (0, find_unowned_files_1.findUnownedFiles)(token, { pr });
-                core.info(`${unownedFiles.length} files failed to match`);
-                for (const filename of unownedFiles) {
-                    core.info(`Did not match: ${filename}`);
-                }
-                const runDetails = (0, get_run_details_1.getRunDetails)(github.context);
-                const comment = (0, format_comment_1.toMarkdown)({ unownedFiles }, { sha: afterSha, runDetails });
-                yield (0, create_or_update_comment_1.createOrUpdateComment)(octokit, { pr, body: comment });
+            if (github.context.eventName !== 'pull_request') {
+                core.warning(`Expected pull_request event but got ${github.context.eventName}. Exiting. `);
+                return;
             }
+            payload = payload;
+            const afterSha = payload.after;
+            const pr = payload.pull_request;
+            const unownedFiles = yield (0, find_unowned_files_1.findUnownedFiles)(token, { pr });
+            core.info(`${unownedFiles.length} files failed to match`);
+            for (const filename of unownedFiles) {
+                core.info(`Did not match: ${filename}`);
+            }
+            const runDetails = (0, get_run_details_1.getRunDetails)(github.context);
+            const comment = (0, format_comment_1.toMarkdown)({ unownedFiles }, { sha: afterSha, runDetails });
+            yield (0, create_or_update_comment_1.createOrUpdateComment)(octokit, { pr, body: comment });
         }
         catch (error) {
             if (error instanceof Error)
@@ -307,6 +187,75 @@ exports.UUID = '7c3ad8b6-5e14-433f-9613-d965d9587089';
 
 /***/ }),
 
+/***/ 478:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createOrUpdateComment = void 0;
+const constants_1 = __nccwpck_require__(2842);
+const debug_1 = __importDefault(__nccwpck_require__(0));
+const debug = debug_1.default.extend('create-or-update-comment');
+function findExistingComment(octokit, { owner, repo, issue_number }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { data: comments } = yield octokit.rest.issues.listComments({
+            owner,
+            repo,
+            issue_number
+        });
+        const predicate = (comment) => { var _a, _b; return Boolean(((_a = comment.user) === null || _a === void 0 ? void 0 : _a.type) === 'Bot' && ((_b = comment.body) === null || _b === void 0 ? void 0 : _b.includes(constants_1.UUID))); };
+        return comments.find(predicate);
+    });
+}
+function createOrUpdateComment(octokit, { pr, body }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const owner = pr.base.repo.owner.login;
+        const repo = pr.base.repo.name;
+        const issue_number = pr.number;
+        const comment = yield findExistingComment(octokit, {
+            owner,
+            repo,
+            issue_number
+        });
+        if (!comment) {
+            debug(`Found no comment, creating one`);
+            const result = yield octokit.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body
+            });
+            debug(`Created comment with id %o`, result.data.id);
+        }
+        else {
+            debug(`Found comment %o, updating its body`, comment.id);
+            yield octokit.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: comment.id,
+                body
+            });
+        }
+    });
+}
+exports.createOrUpdateComment = createOrUpdateComment;
+
+
+/***/ }),
+
 /***/ 0:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -317,21 +266,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.enableDebugging = void 0;
-// import * as core from '@actions/core'
 const debug_1 = __importDefault(__nccwpck_require__(8237));
 const NAME = 'codeowners-scan';
 const debug = (0, debug_1.default)(NAME);
 function enableDebugging() {
     debug_1.default.enable(`${NAME}:*`);
-    // const debugEnv = process.env['DEBUG']
-    // if (debugEnv !== '') {
-    //   core.info(`appending DEBUG env`)
-    //   process.env['DEBUG'] = `${debugEnv},${NAME}:*`
-    // } else {
-    //   core.info(`setting DEBUG env`)
-    //   process.env['DEBUG'] = `${NAME}:*`
-    // }
-    // core.info(`debug env: ${process.env['DEBUG']}`)
 }
 exports.enableDebugging = enableDebugging;
 exports["default"] = debug;
@@ -417,7 +356,7 @@ function findAddedOrChangedFiles(octokit, { pr }) {
             pull_number: pr.number
         });
         const allChanges = result.data;
-        debug(`found %o changed files. First 100 changed files: %O`, allChanges.length, allChanges.map(change => change.filename).slice(0, 100));
+        debug(`found %o changed files.`, allChanges.length);
         const addedOrChanged = allChanges
             .filter(change => change.status !== 'removed')
             .map(change => change.filename);
@@ -425,6 +364,61 @@ function findAddedOrChangedFiles(octokit, { pr }) {
         return addedOrChanged;
     });
 }
+
+
+/***/ }),
+
+/***/ 2372:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.toMarkdown = void 0;
+const handlebars = __importStar(__nccwpck_require__(7492));
+const fs = __importStar(__nccwpck_require__(7147));
+const path = __importStar(__nccwpck_require__(1017));
+const constants_1 = __nccwpck_require__(2842);
+const templateFile = fs.readFileSync(path.join(__dirname, 'templates', 'summary.hbs'), { encoding: 'utf8' });
+const bodyTemplate = handlebars.compile(templateFile);
+const footerTemplateFile = fs.readFileSync(path.join(__dirname, 'templates', 'summary-footer.hbs'), { encoding: 'utf8' });
+const footerTemplate = handlebars.compile(footerTemplateFile);
+function toMarkdown(summary, { sha, runDetails }) {
+    const context = {
+        sha,
+        uuid: constants_1.UUID,
+        unownedFiles: summary.unownedFiles,
+        createdAt: new Date(Date.now()).toISOString(),
+        runDetails
+    };
+    const body = bodyTemplate(context);
+    const footer = footerTemplate(context);
+    return `${body}\n\n${footer}`;
+}
+exports.toMarkdown = toMarkdown;
 
 
 /***/ }),
