@@ -108,6 +108,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.fetchCodeownersPatterns = exports.isSomePatternMatch = void 0;
 const ignore_1 = __importDefault(__nccwpck_require__(1230));
 const debug_1 = __importDefault(__nccwpck_require__(0));
+const request_error_1 = __nccwpck_require__(537);
 const debug = debug_1.default.extend('codeowners-file');
 /*
  * Whether the filename matches one of the passed patterns.
@@ -127,23 +128,45 @@ function parseCodeowners(codeowners) {
         return [parts[0], parts[1]];
     });
 }
-// TODO, catch (?) the 404 if the file doesn't exist
-// TODO: try multiple file locations as specified by github's docs
-// TODO: coalesce unowned files to shared paths. Ie if /path/to/a.txt and /path/to/b.txt, can just print `/path/to/*` had unowned files
 function fetchCodeownersPatterns(octokit, { owner, repo, ref }) {
     return __awaiter(this, void 0, void 0, function* () {
-        const codeowners = yield fetchFile(octokit, {
-            owner,
-            repo,
-            ref,
-            path: 'CODEOWNERS'
-        });
-        const patterns = parseCodeownersPatterns(codeowners);
+        const codeownersFiles = yield findCodeownersFiles(octokit, { owner, repo, ref });
+        let patterns = [];
+        for (const [file, contents] of Object.entries(codeownersFiles)) {
+            const parsedPatterns = parseCodeownersPatterns(contents);
+            debug(`Parsed %o patterns from file %o`, parsedPatterns.length, file);
+            patterns = [...patterns, ...parsedPatterns];
+        }
         debug(`Found %o codeowners patterns. first 100 %O`, patterns.length, patterns.slice(0, 100));
         return patterns;
     });
 }
 exports.fetchCodeownersPatterns = fetchCodeownersPatterns;
+function findCodeownersFiles(octokit, { owner, repo, ref }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const paths = ['CODEOWNERS', '.github/CODEOWNERS'];
+        const results = {};
+        for (const path of paths) {
+            try {
+                results[path] = yield fetchFile(octokit, { owner, repo, ref, path });
+            }
+            catch (e) {
+                if (e instanceof request_error_1.RequestError) {
+                    if (e.status === 404) {
+                        debug(`received 404 response when fetching file at path %o`, path);
+                    }
+                    else {
+                        throw e;
+                    }
+                }
+                else {
+                    throw e;
+                }
+            }
+        }
+        return results;
+    });
+}
 function fetchFile(octokit, { owner, repo, ref, path }) {
     return __awaiter(this, void 0, void 0, function* () {
         const result = yield octokit.rest.repos.getContent({
@@ -161,7 +184,7 @@ function fetchFile(octokit, { owner, repo, ref, path }) {
             return decoded;
         }
         else {
-            debug(`file was empty or missing at path %o`, path);
+            debug(`unexpectedly found no content for file at path %o`, path);
             return '';
         }
     });
