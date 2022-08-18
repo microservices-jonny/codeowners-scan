@@ -1,4 +1,3 @@
-import * as core from '@actions/core'
 import {MyOctokit} from './utils/types'
 import {PullRequest} from '@octokit/webhooks-definitions/schema'
 import {UUID} from './utils/constants'

@@ -1,3 +1,4 @@
+import * as core from '@actions/core'
 import debugBase from 'debug'
 import type {Debugger} from 'debug'
 
