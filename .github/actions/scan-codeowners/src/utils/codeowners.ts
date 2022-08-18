@@ -40,7 +40,9 @@ export async function fetchCodeownersPatterns(
     ref,
     path: 'CODEOWNERS'
   })
-  return parseCodeownersPatterns(codeowners)
+  const patterns = parseCodeownersPatterns(codeowners)
+  debug(`Found %o codeowners patterns`, patterns.length)
+  return patterns
 }
 
 async function fetchFile(
@@ -53,15 +55,15 @@ async function fetchFile(
     ref,
     path
   })
-  debug(`fetched file %o`, path)
+  debug(`fetching file at path %o`, path)
   const data = result.data as unknown as {content: string}
   const content = data.content || ''
   if (content) {
-    debug(`fetched file %o`, path)
     const encoded = Buffer.from(content, 'base64')
     const decoded = encoded.toString('utf8')
     return decoded
   } else {
+    debug(`file was empty or missing at path %o`, path)
     return ''
   }
 }

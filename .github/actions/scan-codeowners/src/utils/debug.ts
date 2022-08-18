@@ -15,7 +15,7 @@ export function enableDebugging(): void {
   } else {
     core.info(`setting DEBUG env`)
     process.env['DEBUG'] = `${NAME}:*`
-    core.info(`debug env: ${process.env['DEBUG']}`)
   }
+  core.info(`debug env: ${process.env['DEBUG']}`)
 }
 export default debug
