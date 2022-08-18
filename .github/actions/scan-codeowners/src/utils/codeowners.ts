@@ -41,7 +41,11 @@ export async function fetchCodeownersPatterns(
     path: 'CODEOWNERS'
   })
   const patterns = parseCodeownersPatterns(codeowners)
-  debug(`Found %o codeowners patterns`, patterns.length)
+  debug(
+    `Found %o codeowners patterns. first 100 %O`,
+    patterns.length,
+    patterns.slice(0, 100)
+  )
   return patterns
 }
 
