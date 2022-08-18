@@ -227,6 +227,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.fetchCodeownersPatterns = exports.isSomePatternMatch = void 0;
 const ignore_1 = __importDefault(__nccwpck_require__(1230));
+const debug_1 = __importDefault(__nccwpck_require__(0));
+const debug = debug_1.default.extend('codeowners-file');
 /*
  * Whether the filename matches one of the passed patterns.
  */
@@ -268,9 +270,11 @@ function fetchFile(octokit, { owner, repo, ref, path }) {
             ref,
             path
         });
+        debug(`fetched file %o`, path);
         const data = result.data;
         const content = data.content || '';
         if (content) {
+            debug(`fetched file %o`, path);
             const encoded = Buffer.from(content, 'base64');
             const decoded = encoded.toString('utf8');
             return decoded;
