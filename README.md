@@ -13,7 +13,7 @@ A sample comment looks like this:
 
 This code is based off of the template https://github.com/actions/typescript-action.
 
-## Development
+# Development
 
 When developing locally, remember to compile the changes. From the `.github/actions/scan-codeowners` directory, run:
 
@@ -23,7 +23,14 @@ npm run build && npm run package
 
 Then commit and push the compiled changes.
 
-### Running Locally
+## Code Organization
+
+Source code for the action is in `.github/actions/scan-codeowners`.
+The `src/` dir has the typescript files. The `dist/` and `lib/` dirs hold compiled code and shouldn't be edited directly.
+
+Although there are some jest files and a `__tests__/` dir, there are no tests (yet) for this action.
+
+## Running Locally
 
 The `cli.ts` file is included to test the 'scan' action locally.
 Run it by first exporting the required env vars (see the file itself for the list), then build to JS and run.
