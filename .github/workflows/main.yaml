@@ -1,19 +1,16 @@
-on: [push]
+on:
+  pull_request
 
 jobs:
-  hello_world_job:
+  codeowners-scan:
     runs-on: ubuntu-latest
-    name: A job to say hello
+    name: Demonstrate codeowners-scanning
     steps:
       # To use this repository's private action,
       # you must check out the repository
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Hello world action step
-        uses: ./.github/actions/basic
-        id: hello
+      - name: scan codeowners
+        uses: ./.github/actions/scan-codeowners
         with:
-          who-to-greet: 'Mona the Octocat'
-      # Use the output from the `hello` step
-      - name: Get the output time
-        run: echo "The time was ${{ steps.hello.outputs.time }}"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

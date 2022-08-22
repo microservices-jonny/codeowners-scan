@@ -1,0 +1,16 @@
+## Scan Codeowners Results {{#if passed}}✅{{else}}❌{{/if}}
+
+Found {{patterns.length}} patterns in the following codeowners files:
+
+{{#each codeownersFiles as |file|}}
+  * {{file}} {{#if isPreferredCodeownersFile}}{{else}}⚠️{{/if}}
+{{/each}}
+
+
+#### Commit {{sha}}
+
+Unowned file count: {{unownedFiles.length}}
+
+{{#each unownedFiles as |file|}}
+  * {{file}}
+{{/each}}
