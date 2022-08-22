@@ -42,10 +42,19 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const create_or_update_comment_1 = __nccwpck_require__(478);
-const find_unowned_files_1 = __nccwpck_require__(2409);
 const get_run_details_1 = __nccwpck_require__(7352);
 const format_comment_1 = __nccwpck_require__(2372);
 const debug_1 = __nccwpck_require__(0);
+const codeowners_1 = __nccwpck_require__(4702);
+/**
+ * doc links
+ * https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
+ * https://github.com/actions/toolkit
+ * https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
+ * https://octokit.github.io/rest.js/v18#repos
+ * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+ * https://github.com/kaelzhang/node-ignore#usage
+ */
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -67,13 +76,15 @@ function run() {
             payload = payload;
             const afterSha = payload.after;
             const pr = payload.pull_request;
-            const unownedFiles = yield (0, find_unowned_files_1.findUnownedFiles)(token, { pr });
-            core.info(`${unownedFiles.length} files failed to match`);
-            for (const filename of unownedFiles) {
+            const scanResult = yield (0, codeowners_1.scan)(token, { pr });
+            core.info(`Found ${scanResult.addedOrChangedFiles.length} added or changed files for pr ${pr.number} [ref ${pr.head.ref}] relative to base ${pr.base.ref}`);
+            core.info(`Found ${scanResult.patterns.length} patterns in the following codeowners files ${scanResult.codeownersFiles.join(', ')}`);
+            core.info(`${scanResult.unownedFiles.length} files failed to match`);
+            for (const filename of scanResult.unownedFiles) {
                 core.info(`Did not match: ${filename}`);
             }
             const runDetails = (0, get_run_details_1.getRunDetails)(github.context);
-            const comment = (0, format_comment_1.toMarkdown)({ unownedFiles }, { sha: afterSha, runDetails });
+            const comment = (0, format_comment_1.toMarkdown)(scanResult, { sha: afterSha, runDetails });
             yield (0, create_or_update_comment_1.createOrUpdateComment)(octokit, { pr, body: comment });
         }
         catch (error) {
@@ -92,6 +103,29 @@ run();
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -105,11 +139,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fetchCodeownersPatterns = exports.isSomePatternMatch = void 0;
+exports.scan = exports.isSomePatternMatch = exports.debug = void 0;
+const github = __importStar(__nccwpck_require__(5438));
 const ignore_1 = __importDefault(__nccwpck_require__(1230));
 const debug_1 = __importDefault(__nccwpck_require__(0));
 const request_error_1 = __nccwpck_require__(537);
-const debug = debug_1.default.extend('codeowners-file');
+const fetch_pr_changed_files_1 = __nccwpck_require__(6342);
+const fetch_file_1 = __nccwpck_require__(9952);
+const constants_1 = __nccwpck_require__(2842);
+exports.debug = debug_1.default.extend('codeowners-file');
 /*
  * Whether the filename matches one of the passed patterns.
  */
@@ -117,43 +155,49 @@ function isSomePatternMatch(filename, patterns) {
     return (0, ignore_1.default)().add(patterns).ignores(filename);
 }
 exports.isSomePatternMatch = isSomePatternMatch;
-function parseCodeowners(codeowners) {
-    return codeowners
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0)
-        .filter(line => !line.startsWith('#'))
-        .map(line => {
-        const parts = line.split(/\s+/).map(part => part.trim());
-        return [parts[0], parts[1]];
+function parseAllPatterns(codeownersFilesMap) {
+    let patterns = [];
+    for (const [file, contents] of Object.entries(codeownersFilesMap)) {
+        const parsedPatterns = parseCodeownersPatterns(contents);
+        (0, exports.debug)(`Parsed %o patterns from file %o`, parsedPatterns.length, file);
+        patterns = [...patterns, ...parsedPatterns];
+    }
+    return patterns;
+}
+function extractPrDetails(pr) {
+    return {
+        owner: pr.base.repo.owner.login,
+        repo: pr.base.repo.name,
+        ref: pr.base.ref
+    };
+}
+function scan(token, { pr }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = github.getOctokit(token);
+        const codeownersFilesMap = yield fetchCodeownersFilesMap(octokit, extractPrDetails(pr));
+        const addedOrChangedFiles = yield (0, fetch_pr_changed_files_1.findAddedOrChangedFiles)(octokit, { pr });
+        const patterns = parseAllPatterns(codeownersFilesMap);
+        const unownedFiles = addedOrChangedFiles.filter(filename => !isSomePatternMatch(filename, patterns));
+        return {
+            codeownersFiles: Object.keys(codeownersFilesMap),
+            addedOrChangedFiles,
+            unownedFiles,
+            patterns
+        };
     });
 }
-function fetchCodeownersPatterns(octokit, { owner, repo, ref }) {
+exports.scan = scan;
+function fetchCodeownersFilesMap(octokit, { owner, repo, ref }) {
     return __awaiter(this, void 0, void 0, function* () {
-        const codeownersFiles = yield findCodeownersFiles(octokit, { owner, repo, ref });
-        let patterns = [];
-        for (const [file, contents] of Object.entries(codeownersFiles)) {
-            const parsedPatterns = parseCodeownersPatterns(contents);
-            debug(`Parsed %o patterns from file %o`, parsedPatterns.length, file);
-            patterns = [...patterns, ...parsedPatterns];
-        }
-        debug(`Found %o codeowners patterns. first 100 %O`, patterns.length, patterns.slice(0, 100));
-        return patterns;
-    });
-}
-exports.fetchCodeownersPatterns = fetchCodeownersPatterns;
-function findCodeownersFiles(octokit, { owner, repo, ref }) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const paths = ['CODEOWNERS', '.github/CODEOWNERS'];
         const results = {};
-        for (const path of paths) {
+        for (const path of constants_1.CODEOWNERS_POSSIBLE_FILE_PATHS) {
             try {
-                results[path] = yield fetchFile(octokit, { owner, repo, ref, path });
+                results[path] = yield (0, fetch_file_1.fetchFile)(octokit, { owner, repo, ref, path });
             }
             catch (e) {
                 if (e instanceof request_error_1.RequestError) {
                     if (e.status === 404) {
-                        debug(`received 404 response when fetching file at path %o`, path);
+                        (0, exports.debug)(`received 404 response when fetching file at path %o`, path);
                     }
                     else {
                         throw e;
@@ -167,26 +211,15 @@ function findCodeownersFiles(octokit, { owner, repo, ref }) {
         return results;
     });
 }
-function fetchFile(octokit, { owner, repo, ref, path }) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const result = yield octokit.rest.repos.getContent({
-            owner,
-            repo,
-            ref,
-            path
-        });
-        debug(`fetching file at path %o`, path);
-        const data = result.data;
-        const content = data.content || '';
-        if (content) {
-            const encoded = Buffer.from(content, 'base64');
-            const decoded = encoded.toString('utf8');
-            return decoded;
-        }
-        else {
-            debug(`unexpectedly found no content for file at path %o`, path);
-            return '';
-        }
+function parseCodeowners(codeowners) {
+    return codeowners
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .filter(line => !line.startsWith('#'))
+        .map(line => {
+        const parts = line.split(/\s+/).map(part => part.trim());
+        return [parts[0], parts[1]];
     });
 }
 function parseCodeownersPatterns(codeowners) {
@@ -201,10 +234,18 @@ function parseCodeownersPatterns(codeowners) {
 
 "use strict";
 
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UUID = exports.TRUNCATE_OMISSION = exports.CODEOWNERS_POSSIBLE_FILE_PATHS = exports.MAX_CHAR_COUNT = exports.PREFERRED_CODEOWNERS_FILE = void 0;
+exports.PREFERRED_CODEOWNERS_FILE = '.github/CODEOWNERS';
+exports.MAX_CHAR_COUNT = 65536;
+exports.CODEOWNERS_POSSIBLE_FILE_PATHS = [
+    exports.PREFERRED_CODEOWNERS_FILE,
+    'docs/CODEOWNERS',
+    'CODEOWNERS'
+];
+exports.TRUNCATE_OMISSION = '... TRUNCATED ...';
 // Random UUID used to identify the last comment added by this
 // action
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.UUID = void 0;
 exports.UUID = '7c3ad8b6-5e14-433f-9613-d965d9587089';
 
 
@@ -301,96 +342,6 @@ exports["default"] = debug;
 
 /***/ }),
 
-/***/ 2409:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.findUnownedFiles = void 0;
-const github = __importStar(__nccwpck_require__(5438));
-const codeowners_1 = __nccwpck_require__(4702);
-const debug_1 = __importDefault(__nccwpck_require__(0));
-const debug = debug_1.default.extend('fetch-codeowners');
-/**
- * doc links
- * https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
- * https://github.com/actions/toolkit
- * https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
- * https://octokit.github.io/rest.js/v18#repos
- * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
- * https://github.com/kaelzhang/node-ignore#usage
- */
-function findUnownedFiles(token, { pr }) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const octokit = github.getOctokit(token);
-        const changedFiles = yield findAddedOrChangedFiles(octokit, { pr });
-        const patterns = yield (0, codeowners_1.fetchCodeownersPatterns)(octokit, {
-            owner: pr.base.repo.owner.login,
-            repo: pr.base.repo.name,
-            ref: pr.base.ref
-        });
-        const unownedFiles = changedFiles.filter(filename => !(0, codeowners_1.isSomePatternMatch)(filename, patterns));
-        debug(`filtered %o changed files to %o unownedFiles. first 100 unowned: %O`, changedFiles.length, unownedFiles.length, unownedFiles.slice(0, 100));
-        return unownedFiles;
-    });
-}
-exports.findUnownedFiles = findUnownedFiles;
-function findAddedOrChangedFiles(octokit, { pr }) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const result = yield octokit.rest.pulls.listFiles({
-            owner: pr.base.repo.owner.login,
-            repo: pr.base.repo.name,
-            pull_number: pr.number
-        });
-        const allChanges = result.data;
-        debug(`found %o changed files.`, allChanges.length);
-        const addedOrChanged = allChanges
-            .filter(change => change.status !== 'removed')
-            .map(change => change.filename);
-        debug(`after filtering out removed files, found %o added-or-changed. first 100: %O`, addedOrChanged.length, addedOrChanged.slice(0, 100));
-        return addedOrChanged;
-    });
-}
-
-
-/***/ }),
-
 /***/ 2372:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -425,23 +376,126 @@ const handlebars = __importStar(__nccwpck_require__(7492));
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const constants_1 = __nccwpck_require__(2842);
-const templateFile = fs.readFileSync(path.join(__dirname, 'templates', 'summary.hbs'), { encoding: 'utf8' });
-const bodyTemplate = handlebars.compile(templateFile);
-const footerTemplateFile = fs.readFileSync(path.join(__dirname, 'templates', 'summary-footer.hbs'), { encoding: 'utf8' });
+const truncate_1 = __nccwpck_require__(7863);
+const bodyFile = fs.readFileSync(path.join(__dirname, 'templates', 'body.hbs'), { encoding: 'utf8' });
+const bodyTemplate = handlebars.compile(bodyFile);
+const footerTemplateFile = fs.readFileSync(path.join(__dirname, 'templates', 'footer.hbs'), { encoding: 'utf8' });
 const footerTemplate = handlebars.compile(footerTemplateFile);
-function toMarkdown(summary, { sha, runDetails }) {
+const HELPERS = {
+    isPreferredCodeownersFile(file) {
+        return file === constants_1.PREFERRED_CODEOWNERS_FILE;
+    }
+};
+function toMarkdown(scanResult, { sha, runDetails }) {
     const context = {
         sha,
         uuid: constants_1.UUID,
-        unownedFiles: summary.unownedFiles,
+        unownedFiles: scanResult.unownedFiles,
+        codeownersFiles: scanResult.codeownersFiles,
+        patterns: scanResult.patterns,
         createdAt: new Date(Date.now()).toISOString(),
-        runDetails
+        runDetails,
+        passed: scanResult.unownedFiles.length === 0
     };
-    const body = bodyTemplate(context);
     const footer = footerTemplate(context);
-    return `${body}\n\n${footer}`;
+    const bodyFooterSeparator = '\n\n';
+    const body = (0, truncate_1.truncate)(bodyTemplate(context, { helpers: HELPERS }), {
+        max: constants_1.MAX_CHAR_COUNT - (bodyFooterSeparator.length + footer.length),
+        omission: constants_1.TRUNCATE_OMISSION
+    });
+    return [body, bodyFooterSeparator, footer].join('');
 }
 exports.toMarkdown = toMarkdown;
+
+
+/***/ }),
+
+/***/ 9952:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.fetchFile = void 0;
+const debug_1 = __importDefault(__nccwpck_require__(0));
+const debug = debug_1.default.extend('fetch-file');
+function fetchFile(octokit, { owner, repo, ref, path }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const result = yield octokit.rest.repos.getContent({
+            owner,
+            repo,
+            ref,
+            path
+        });
+        debug(`fetching file at path %o`, path);
+        const data = result.data;
+        const content = data.content || '';
+        if (content) {
+            const encoded = Buffer.from(content, 'base64');
+            const decoded = encoded.toString('utf8');
+            return decoded;
+        }
+        else {
+            debug(`unexpectedly found no content for file at path %o`, path);
+            return '';
+        }
+    });
+}
+exports.fetchFile = fetchFile;
+
+
+/***/ }),
+
+/***/ 6342:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.findAddedOrChangedFiles = void 0;
+const debug_1 = __importDefault(__nccwpck_require__(0));
+const debug = debug_1.default.extend('find-added-or-changed-files');
+function findAddedOrChangedFiles(octokit, { pr }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const result = yield octokit.rest.pulls.listFiles({
+            owner: pr.base.repo.owner.login,
+            repo: pr.base.repo.name,
+            pull_number: pr.number
+        });
+        const allChanges = result.data;
+        debug(`found %o changed files.`, allChanges.length);
+        const addedOrChanged = allChanges
+            .filter(change => change.status !== 'removed')
+            .map(change => change.filename);
+        debug(`after filtering out removed files, found %o added-or-changed. first 100: %O`, addedOrChanged.length, addedOrChanged.slice(0, 100));
+        return addedOrChanged;
+    });
+}
+exports.findAddedOrChangedFiles = findAddedOrChangedFiles;
 
 
 /***/ }),
@@ -462,6 +516,24 @@ function getRunDetails(context) {
     };
 }
 exports.getRunDetails = getRunDetails;
+
+
+/***/ }),
+
+/***/ 7863:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.truncate = void 0;
+function truncate(s, { max, omission }) {
+    if (s.length >= max - omission.length) {
+        return s.slice(0, max - omission.length) + omission;
+    }
+    return s;
+}
+exports.truncate = truncate;
 
 
 /***/ }),
