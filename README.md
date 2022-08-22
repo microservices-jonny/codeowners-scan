@@ -38,6 +38,7 @@ jobs:
         uses: ./.github/actions/scan-codeowners
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          enable-debug-log: "true"
 ```
 
 # Development
