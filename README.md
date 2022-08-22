@@ -13,6 +13,33 @@ A sample comment looks like this:
 
 This code is based off of the template https://github.com/actions/typescript-action.
 
+# Usage
+
+To use this action in a repo:
+
+- Copy the code from `./.github/actions/scan-codeowners` into the repo
+- Reference the (local) action from a workflow file, e.g.:
+
+```
+# .github/workflows/main.yaml
+on:
+  pull_request
+
+jobs:
+  codeowners-scan:
+    runs-on: ubuntu-latest
+    name: Demonstrate codeowners-scanning
+    steps:
+      # To use this repository's private action,
+      # you must check out the repository
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: scan codeowners
+        uses: ./.github/actions/scan-codeowners
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
 # Development
 
 When developing locally, remember to compile the changes. From the `.github/actions/scan-codeowners` directory, run:
