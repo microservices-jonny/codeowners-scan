@@ -12,3 +12,29 @@ A sample comment looks like this:
 --
 
 This code is based off of the template https://github.com/actions/typescript-action.
+
+## Development
+
+When developing locally, remember to compile the changes. From the `.github/actions/scan-codeowners` directory, run:
+
+```
+npm run build && npm run package
+```
+
+Then commit and push the compiled changes.
+
+### Running Locally
+
+The `cli.ts` file is included to test the 'scan' action locally.
+Run it by first exporting the required env vars (see the file itself for the list), then build to JS and run.
+For example:
+
+```
+$ export GITHUB_TOKEN=xyz
+$ export PR=123
+$ export REPO=my-repo
+$ export OWNER=my-github-name
+$ npm run build && node ./lib/cli.js
+```
+
+To view extra debugging info, set the env var `DEBUG=codeowners-scan:*`.
