@@ -7,7 +7,7 @@ are considered "unowned". The action adds a comment to the PR with the results.
 
 A sample comment looks like this:
 
-![./screenshot.png]
+![Screenshot](./screenshot.png)
 
 --
 
