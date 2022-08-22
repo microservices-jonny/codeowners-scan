@@ -5,10 +5,20 @@ import {
   PullRequestEvent
 } from '@octokit/webhooks-definitions/schema'
 import {createOrUpdateComment} from './utils/create-or-update-comment'
-import {findUnownedFiles} from './utils/find-unowned-files'
 import {getRunDetails} from './utils/github/get-run-details'
 import {toMarkdown} from './utils/format-comment'
 import {enableDebugging} from './utils/debug'
+import {scan} from './utils/codeowners'
+
+/**
+ * doc links
+ * https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
+ * https://github.com/actions/toolkit
+ * https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
+ * https://octokit.github.io/rest.js/v18#repos
+ * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+ * https://github.com/kaelzhang/node-ignore#usage
+ */
 
 async function run(): Promise<void> {
   try {
@@ -35,15 +45,26 @@ async function run(): Promise<void> {
     payload = payload as PullRequestEvent
     const afterSha = payload.after
     const pr = payload.pull_request as PullRequest
-    const unownedFiles = await findUnownedFiles(token, {pr})
 
-    core.info(`${unownedFiles.length} files failed to match`)
-    for (const filename of unownedFiles) {
+    const scanResult = await scan(token, {pr})
+
+    core.info(
+      `Found ${scanResult.addedOrChangedFiles.length} added or changed files for pr ${pr.number} [ref ${pr.head.ref}] relative to base ${pr.base.ref}`
+    )
+    core.info(
+      `Found ${
+        scanResult.patterns.length
+      } patterns in the following codeowners files ${scanResult.codeownersFiles.join(
+        ', '
+      )}`
+    )
+    core.info(`${scanResult.unownedFiles.length} files failed to match`)
+    for (const filename of scanResult.unownedFiles) {
       core.info(`Did not match: ${filename}`)
     }
 
     const runDetails = getRunDetails(github.context)
-    const comment = toMarkdown({unownedFiles}, {sha: afterSha, runDetails})
+    const comment = toMarkdown(scanResult, {sha: afterSha, runDetails})
     await createOrUpdateComment(octokit, {pr, body: comment})
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)

@@ -1,9 +1,14 @@
+import * as github from '@actions/github'
 import ignore from 'ignore'
-import {MyOctokit} from './types'
+import {MyOctokit, ScanResult} from './types'
 import debugBase from './debug'
 import {RequestError} from '@octokit/request-error'
+import {findAddedOrChangedFiles} from './github/fetch-pr-changed-files'
+import type {PullRequest} from '@octokit/webhooks-definitions/schema'
+import {fetchFile} from './github/fetch-file'
+import {CODEOWNERS_POSSIBLE_FILE_PATHS} from './constants'
 
-const debug = debugBase.extend('codeowners-file')
+export const debug = debugBase.extend('codeowners-file')
 
 /*
  * Whether the filename matches one of the passed patterns.
@@ -16,46 +21,60 @@ export function isSomePatternMatch(
   return ignore().add(patterns).ignores(filename)
 }
 
-function parseCodeowners(codeowners: string): [string, string][] {
-  return codeowners
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0)
-    .filter(line => !line.startsWith('#'))
-    .map(line => {
-      const parts = line.split(/\s+/).map(part => part.trim())
-      return [parts[0], parts[1]]
-    })
-}
-
-export async function fetchCodeownersPatterns(
-  octokit: MyOctokit,
-  {owner, repo, ref}
-): Promise<string[]> {
-  const codeownersFiles = await findCodeownersFiles(octokit, {owner, repo, ref})
+function parseAllPatterns(
+  codeownersFilesMap: Record<string, string>
+): string[] {
   let patterns: string[] = []
-  for (const [file, contents] of Object.entries(codeownersFiles)) {
+  for (const [file, contents] of Object.entries(codeownersFilesMap)) {
     const parsedPatterns = parseCodeownersPatterns(contents)
     debug(`Parsed %o patterns from file %o`, parsedPatterns.length, file)
     patterns = [...patterns, ...parsedPatterns]
   }
-  debug(
-    `Found %o codeowners patterns. first 100 %O`,
-    patterns.length,
-    patterns.slice(0, 100)
-  )
   return patterns
 }
 
-async function findCodeownersFiles(
+function extractPrDetails(pr: PullRequest): {
+  owner: string
+  repo: string
+  ref: string
+} {
+  return {
+    owner: pr.base.repo.owner.login,
+    repo: pr.base.repo.name,
+    ref: pr.base.ref
+  }
+}
+
+export async function scan(
+  token: string,
+  {pr}: {pr: PullRequest}
+): Promise<ScanResult> {
+  const octokit = github.getOctokit(token)
+  const codeownersFilesMap = await fetchCodeownersFilesMap(
+    octokit,
+    extractPrDetails(pr)
+  )
+  const addedOrChangedFiles = await findAddedOrChangedFiles(octokit, {pr})
+  const patterns = parseAllPatterns(codeownersFilesMap)
+  const unownedFiles = addedOrChangedFiles.filter(
+    filename => !isSomePatternMatch(filename, patterns)
+  )
+
+  return {
+    codeownersFiles: Object.keys(codeownersFilesMap),
+    addedOrChangedFiles,
+    unownedFiles,
+    patterns
+  }
+}
+
+async function fetchCodeownersFilesMap(
   octokit: MyOctokit,
   {owner, repo, ref}
 ): Promise<Record<string, string>> {
-  const paths = ['CODEOWNERS', '.github/CODEOWNERS']
-
   const results: Record<string, string> = {}
 
-  for (const path of paths) {
+  for (const path of CODEOWNERS_POSSIBLE_FILE_PATHS) {
     try {
       results[path] = await fetchFile(octokit, {owner, repo, ref, path})
     } catch (e) {
@@ -74,27 +93,16 @@ async function findCodeownersFiles(
   return results
 }
 
-async function fetchFile(
-  octokit: MyOctokit,
-  {owner, repo, ref, path}
-): Promise<string> {
-  const result = await octokit.rest.repos.getContent({
-    owner,
-    repo,
-    ref,
-    path
-  })
-  debug(`fetching file at path %o`, path)
-  const data = result.data as unknown as {content: string}
-  const content = data.content || ''
-  if (content) {
-    const encoded = Buffer.from(content, 'base64')
-    const decoded = encoded.toString('utf8')
-    return decoded
-  } else {
-    debug(`unexpectedly found no content for file at path %o`, path)
-    return ''
-  }
+function parseCodeowners(codeowners: string): [string, string][] {
+  return codeowners
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .filter(line => !line.startsWith('#'))
+    .map(line => {
+      const parts = line.split(/\s+/).map(part => part.trim())
+      return [parts[0], parts[1]]
+    })
 }
 
 function parseCodeownersPatterns(codeowners: string): string[] {
