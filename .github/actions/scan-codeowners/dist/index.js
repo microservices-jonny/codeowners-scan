@@ -86,6 +86,12 @@ function run() {
             const runDetails = (0, get_run_details_1.getRunDetails)(github.context);
             const comment = (0, format_comment_1.toMarkdown)(scanResult, { sha: afterSha, runDetails });
             yield (0, create_or_update_comment_1.createOrUpdateComment)(octokit, { pr, body: comment });
+            /*
+            TO ENABLE FAILING:
+            if (scanResult.unownedFiles.length) {
+              core.setFailed(`${scanRules.unownedFiles.length} file(s) are not covered by a CODEOWNERS rule`);
+            }
+            */
         }
         catch (error) {
             if (error instanceof Error)
@@ -166,9 +172,9 @@ function parseAllPatterns(codeownersFilesMap) {
 }
 function extractPrDetails(pr) {
     return {
-        owner: pr.base.repo.owner.login,
-        repo: pr.base.repo.name,
-        ref: pr.base.ref
+        owner: pr.head.repo.owner.login,
+        repo: pr.head.repo.name,
+        ref: pr.head.ref
     };
 }
 function scan(token, { pr }) {
