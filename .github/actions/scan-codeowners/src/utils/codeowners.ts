@@ -39,9 +39,9 @@ function extractPrDetails(pr: PullRequest): {
   ref: string
 } {
   return {
-    owner: pr.base.repo.owner.login,
-    repo: pr.base.repo.name,
-    ref: pr.base.ref
+    owner: pr.head.repo.owner.login,
+    repo: pr.head.repo.name,
+    ref: pr.head.ref
   }
 }
 
