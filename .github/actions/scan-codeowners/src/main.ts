@@ -66,6 +66,12 @@ async function run(): Promise<void> {
     const runDetails = getRunDetails(github.context)
     const comment = toMarkdown(scanResult, {sha: afterSha, runDetails})
     await createOrUpdateComment(octokit, {pr, body: comment})
+    /*
+    TO ENABLE FAILING:
+    if (scanResult.unownedFiles.length) {
+      core.setFailed(`${scanRules.unownedFiles.length} file(s) are not covered by a CODEOWNERS rule`);
+    }
+    */
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
