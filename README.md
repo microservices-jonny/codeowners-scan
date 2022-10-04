@@ -17,7 +17,7 @@ This code is based off of the template https://github.com/actions/typescript-act
 
 To use this action in a repo:
 
-- Copy the code from `./.github/actions/scan-codeowners` into the repo
+- Copy the code from `./.github/actions/codeowners-scan` into the repo
 - Reference the (local) action from a workflow file, e.g.:
 
 ```
@@ -35,7 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: scan codeowners
-        uses: ./.github/actions/scan-codeowners
+        uses: ./.github/actions/codeowners-scan
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           enable-debug-log: "true"
@@ -43,7 +43,7 @@ jobs:
 
 # Development
 
-When developing locally, remember to compile the changes. From the `.github/actions/scan-codeowners` directory, run:
+When developing locally, remember to compile the changes. From the `.github/actions/codeowners-scan` directory, run:
 
 ```
 npm run build && npm run package
@@ -53,7 +53,7 @@ Then commit and push the compiled changes.
 
 ## Code Organization
 
-Source code for the action is in `.github/actions/scan-codeowners`.
+Source code for the action is in `.github/actions/codeowners-scan`.
 The `src/` dir has the typescript files. The `dist/` and `lib/` dirs hold compiled code and shouldn't be edited directly.
 
 Although there are some jest files and a `__tests__/` dir, there are no tests (yet) for this action.
