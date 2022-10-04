@@ -11,6 +11,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: scan codeowners
-        uses: ./.github/actions/scan-codeowners
+        uses: ./.github/actions/codeowners-scan
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
