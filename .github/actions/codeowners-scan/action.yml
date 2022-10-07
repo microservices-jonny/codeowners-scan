@@ -9,6 +9,10 @@ inputs:
     required: false
     description: 'debug logging is enabled when the value is "true"'
     default: "true"
+  only-comment-on-failed-checks:
+    required: false
+    default: true
+    description: 'Only post a comment on the PR if the check fails'
 runs:
   using: 'node16'
   main: 'dist/index.js'
