@@ -67,7 +67,7 @@ export async function createOrUpdateComment(
 
 export async function nothingOrRemoveComment(
   octokit: MyOctokit,
-  {pr, body}: {pr: PullRequest; body: string},
+  pr: PullRequest,
 ): Promise<void> {
   const owner = pr.base.repo.owner.login
   const repo = pr.base.repo.name
