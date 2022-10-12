@@ -61,6 +61,7 @@ function run() {
             const token = core.getInput('GITHUB_TOKEN');
             const octokit = github.getOctokit(token);
             const enableDebugLog = core.getInput('enable-debug-log');
+            const onlyCommentOnFailedChecks = core.getInput('only-comment-on-failed-checks');
             if (enableDebugLog === 'true') {
                 (0, debug_1.enableDebugging)();
                 core.info('Debug log enabled');
@@ -83,9 +84,14 @@ function run() {
             for (const filename of scanResult.unownedFiles) {
                 core.info(`Did not match: ${filename}`);
             }
-            const runDetails = (0, get_run_details_1.getRunDetails)(github.context);
-            const comment = (0, format_comment_1.toMarkdown)(scanResult, { sha: afterSha, runDetails });
-            yield (0, create_or_update_comment_1.createOrUpdateComment)(octokit, { pr, body: comment });
+            if (scanResult.unownedFiles.length > 0 || !onlyCommentOnFailedChecks) {
+                const runDetails = (0, get_run_details_1.getRunDetails)(github.context);
+                const comment = (0, format_comment_1.toMarkdown)(scanResult, { sha: afterSha, runDetails });
+                yield (0, create_or_update_comment_1.createOrUpdateComment)(octokit, { pr, body: comment });
+            }
+            else if (scanResult.unownedFiles.length === 0) {
+                yield (0, create_or_update_comment_1.nothingOrRemoveComment)(octokit, pr);
+            }
             /*
             TO ENABLE FAILING:
             if (scanResult.unownedFiles.length) {
@@ -275,7 +281,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createOrUpdateComment = void 0;
+exports.nothingOrRemoveComment = exports.createOrUpdateComment = void 0;
 const constants_1 = __nccwpck_require__(2842);
 const debug_1 = __importDefault(__nccwpck_require__(0));
 const debug = debug_1.default.extend('create-or-update-comment');
@@ -322,6 +328,30 @@ function createOrUpdateComment(octokit, { pr, body }) {
     });
 }
 exports.createOrUpdateComment = createOrUpdateComment;
+function nothingOrRemoveComment(octokit, pr) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const owner = pr.base.repo.owner.login;
+        const repo = pr.base.repo.name;
+        const issue_number = pr.number;
+        const comment = yield findExistingComment(octokit, {
+            owner,
+            repo,
+            issue_number
+        });
+        if (comment) {
+            debug(`Found comment %o, removing`, comment.id);
+            yield octokit.rest.issues.deleteComment({
+                owner,
+                repo,
+                comment_id: comment.id,
+            });
+        }
+        else {
+            debug(`Found no comment, doing nothing`);
+        }
+    });
+}
+exports.nothingOrRemoveComment = nothingOrRemoveComment;
 
 
 /***/ }),
