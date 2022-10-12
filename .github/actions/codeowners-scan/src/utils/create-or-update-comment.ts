@@ -33,7 +33,8 @@ async function findExistingComment(
 
 export async function createOrUpdateComment(
   octokit: MyOctokit,
-  {pr, body}: {pr: PullRequest; body: string}
+  {pr, body}: {pr: PullRequest; body: string},
+  onlyCommentOnFailedChecks: boolean,
 ): Promise<void> {
   const owner = pr.base.repo.owner.login
   const repo = pr.base.repo.name
