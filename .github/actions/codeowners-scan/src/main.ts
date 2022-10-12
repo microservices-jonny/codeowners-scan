@@ -4,7 +4,7 @@ import {
   PullRequest,
   PullRequestEvent
 } from '@octokit/webhooks-definitions/schema'
-import {createOrUpdateComment} from './utils/create-or-update-comment'
+import {createOrUpdateComment, nothingOrRemoveComment} from './utils/create-or-update-comment'
 import {getRunDetails} from './utils/github/get-run-details'
 import {toMarkdown} from './utils/format-comment'
 import {enableDebugging} from './utils/debug'
