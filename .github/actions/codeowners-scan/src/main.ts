@@ -64,10 +64,12 @@ async function run(): Promise<void> {
       core.info(`Did not match: ${filename}`)
     }
 
-    if(scanResult.unownedFiles.length > 0 || !onlyCommentOnFailedChecks) {
+    if (scanResult.unownedFiles.length > 0 || !onlyCommentOnFailedChecks) {
       const runDetails = getRunDetails(github.context)
       const comment = toMarkdown(scanResult, {sha: afterSha, runDetails})
       await createOrUpdateComment(octokit, {pr, body: comment})
+    } else if (scanResult.unownedFiles.length === 0) {
+      await nothingOrRemoveComment(octokit, pr)
     }
     /*
     TO ENABLE FAILING:
