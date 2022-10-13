@@ -4,7 +4,7 @@ import {
   PullRequest,
   PullRequestEvent
 } from '@octokit/webhooks-definitions/schema'
-import {createOrUpdateComment} from './utils/create-or-update-comment'
+import {createOrUpdateComment, nothingOrRemoveComment} from './utils/create-or-update-comment'
 import {getRunDetails} from './utils/github/get-run-details'
 import {toMarkdown} from './utils/format-comment'
 import {enableDebugging} from './utils/debug'
@@ -25,6 +25,7 @@ async function run(): Promise<void> {
     const token = core.getInput('GITHUB_TOKEN')
     const octokit = github.getOctokit(token)
     const enableDebugLog = core.getInput('enable-debug-log')
+    const onlyCommentOnFailedChecks = core.getInput('only-comment-on-failed-checks')
 
     if (enableDebugLog === 'true') {
       enableDebugging()
@@ -63,9 +64,13 @@ async function run(): Promise<void> {
       core.info(`Did not match: ${filename}`)
     }
 
-    const runDetails = getRunDetails(github.context)
-    const comment = toMarkdown(scanResult, {sha: afterSha, runDetails})
-    await createOrUpdateComment(octokit, {pr, body: comment})
+    if (scanResult.unownedFiles.length > 0 || !onlyCommentOnFailedChecks) {
+      const runDetails = getRunDetails(github.context)
+      const comment = toMarkdown(scanResult, {sha: afterSha, runDetails})
+      await createOrUpdateComment(octokit, {pr, body: comment})
+    } else if (scanResult.unownedFiles.length === 0) {
+      await nothingOrRemoveComment(octokit, pr)
+    }
     /*
     TO ENABLE FAILING:
     if (scanResult.unownedFiles.length) {

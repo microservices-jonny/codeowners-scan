@@ -33,7 +33,7 @@ async function findExistingComment(
 
 export async function createOrUpdateComment(
   octokit: MyOctokit,
-  {pr, body}: {pr: PullRequest; body: string}
+  {pr, body}: {pr: PullRequest; body: string},
 ): Promise<void> {
   const owner = pr.base.repo.owner.login
   const repo = pr.base.repo.name
@@ -62,5 +62,31 @@ export async function createOrUpdateComment(
       comment_id: comment.id,
       body
     })
+  }
+}
+
+export async function nothingOrRemoveComment(
+  octokit: MyOctokit,
+  pr: PullRequest,
+): Promise<void> {
+  const owner = pr.base.repo.owner.login
+  const repo = pr.base.repo.name
+  const issue_number = pr.number
+
+  const comment = await findExistingComment(octokit, {
+    owner,
+    repo,
+    issue_number
+  })
+  
+  if (comment) {
+    debug(`Found comment %o, removing`, comment.id)
+    await octokit.rest.issues.deleteComment({
+      owner,
+      repo,
+      comment_id: comment.id,
+    });
+  } else {
+    debug(`Found no comment, doing nothing`)
   }
 }
