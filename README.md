@@ -1,5 +1,7 @@
 # Scan Codeowners Action
 
+For more information: https://addepar.atlassian.net/wiki/spaces/EN/blog/2022/10/13/11270389844/CODEOWNERS+Check+Automation+GitHub+Action
+
 A github action that is intended to be run whenever a commit is pushed to a PR.
 The action looks over the files that were modified (added or changed) and determines if there
 is a codeowners pattern on the base branch that covers each file. Any files that are not covered
