@@ -50,7 +50,7 @@ async function run(): Promise<void> {
     const scanResult = await scan(token, {pr})
 
     core.info(
-      `Found ${scanResult.addedOrChangedFiles.length} added or changed files for pr ${pr.number} [ref ${pr.head.ref}] relative to base ${pr.base.ref}`
+      `Found ${scanResult.addedOnlyFiles.length} added or changed files for pr ${pr.number} [ref ${pr.head.ref}] relative to base ${pr.base.ref}`
     )
     core.info(
       `Found ${
@@ -71,12 +71,11 @@ async function run(): Promise<void> {
     } else if (scanResult.unownedFiles.length === 0) {
       await nothingOrRemoveComment(octokit, pr)
     }
-    /*
-    TO ENABLE FAILING:
+    // FAILING
     if (scanResult.unownedFiles.length) {
-      core.setFailed(`${scanRules.unownedFiles.length} file(s) are not covered by a CODEOWNERS rule`);
+      core.setFailed(`${scanResult.unownedFiles.length} file(s) are not covered by a CODEOWNERS rule`);
     }
-    */
+    
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
