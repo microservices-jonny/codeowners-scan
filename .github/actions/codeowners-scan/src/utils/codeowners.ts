@@ -3,7 +3,7 @@ import ignore from 'ignore'
 import {MyOctokit, ScanResult} from './types'
 import debugBase from './debug'
 import {RequestError} from '@octokit/request-error'
-import {findAddedOrChangedFiles} from './github/fetch-pr-changed-files'
+import {findAddedOrChangedFiles, findAddedOnlyFiles} from './github/fetch-pr-changed-files'
 import type {PullRequest} from '@octokit/webhooks-definitions/schema'
 import {fetchFile} from './github/fetch-file'
 import {CODEOWNERS_POSSIBLE_FILE_PATHS} from './constants'
@@ -54,15 +54,19 @@ export async function scan(
     octokit,
     extractPrDetails(pr)
   )
-  const addedOrChangedFiles = await findAddedOrChangedFiles(octokit, {pr})
+  /*
+    Changing to AddedOnlyFiles to ignore any changed files
+  */
+  //const addedOrChangedFiles = await findAddedOrChangedFiles(octokit, {pr})
+  const addedOnlyFiles = await findAddedOnlyFiles(octokit, {pr})
   const patterns = parseAllPatterns(codeownersFilesMap)
-  const unownedFiles = addedOrChangedFiles.filter(
+  const unownedFiles = addedOnlyFiles.filter(
     filename => !isSomePatternMatch(filename, patterns)
   )
 
   return {
     codeownersFiles: Object.keys(codeownersFilesMap),
-    addedOrChangedFiles,
+    addedOnlyFiles,
     unownedFiles,
     patterns
   }

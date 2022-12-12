@@ -25,3 +25,25 @@ export async function findAddedOrChangedFiles(
   )
   return addedOrChanged
 }
+
+export async function findAddedOnlyFiles(
+  octokit: MyOctokit,
+  {pr}: {pr: PullRequest}
+): Promise<string[]> {
+  const result = await octokit.rest.pulls.listFiles({
+    owner: pr.base.repo.owner.login,
+    repo: pr.base.repo.name,
+    pull_number: pr.number
+  })
+  const allChanges = result.data
+  debug(`found %o changed files.`, allChanges.length)
+  const addedOnly = allChanges
+    .filter(change => change.status === 'added')
+    .map(change => change.filename)
+  debug(
+    `after filtering out removed-changed files, found %o newly added. first 100: %O`,
+    addedOnly.length,
+    addedOnly.slice(0, 100)
+  )
+  return addedOnly
+}

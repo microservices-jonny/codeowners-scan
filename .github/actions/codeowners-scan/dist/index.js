@@ -78,7 +78,7 @@ function run() {
             const afterSha = payload.after;
             const pr = payload.pull_request;
             const scanResult = yield (0, codeowners_1.scan)(token, { pr });
-            core.info(`Found ${scanResult.addedOrChangedFiles.length} added or changed files for pr ${pr.number} [ref ${pr.head.ref}] relative to base ${pr.base.ref}`);
+            core.info(`Found ${scanResult.addedOnlyFiles.length} added or changed files for pr ${pr.number} [ref ${pr.head.ref}] relative to base ${pr.base.ref}`);
             core.info(`Found ${scanResult.patterns.length} patterns in the following codeowners files ${scanResult.codeownersFiles.join(', ')}`);
             core.info(`${scanResult.unownedFiles.length} files failed to match`);
             for (const filename of scanResult.unownedFiles) {
@@ -92,12 +92,10 @@ function run() {
             else if (scanResult.unownedFiles.length === 0) {
                 yield (0, create_or_update_comment_1.nothingOrRemoveComment)(octokit, pr);
             }
-            /*
-            TO ENABLE FAILING:
+            // FAILING
             if (scanResult.unownedFiles.length) {
-              core.setFailed(`${scanRules.unownedFiles.length} file(s) are not covered by a CODEOWNERS rule`);
+                core.setFailed(`${scanResult.unownedFiles.length} file(s) are not covered by a CODEOWNERS rule`);
             }
-            */
         }
         catch (error) {
             if (error instanceof Error)
@@ -187,12 +185,16 @@ function scan(token, { pr }) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = github.getOctokit(token);
         const codeownersFilesMap = yield fetchCodeownersFilesMap(octokit, extractPrDetails(pr));
-        const addedOrChangedFiles = yield (0, fetch_pr_changed_files_1.findAddedOrChangedFiles)(octokit, { pr });
+        /*
+          Changing to AddedOnlyFiles to ignore any changed files
+        */
+        //const addedOrChangedFiles = await findAddedOrChangedFiles(octokit, {pr})
+        const addedOnlyFiles = yield (0, fetch_pr_changed_files_1.findAddedOnlyFiles)(octokit, { pr });
         const patterns = parseAllPatterns(codeownersFilesMap);
-        const unownedFiles = addedOrChangedFiles.filter(filename => !isSomePatternMatch(filename, patterns));
+        const unownedFiles = addedOnlyFiles.filter(filename => !isSomePatternMatch(filename, patterns));
         return {
             codeownersFiles: Object.keys(codeownersFilesMap),
-            addedOrChangedFiles,
+            addedOnlyFiles,
             unownedFiles,
             patterns
         };
@@ -512,7 +514,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.findAddedOrChangedFiles = void 0;
+exports.findAddedOnlyFiles = exports.findAddedOrChangedFiles = void 0;
 const debug_1 = __importDefault(__nccwpck_require__(0));
 const debug = debug_1.default.extend('find-added-or-changed-files');
 function findAddedOrChangedFiles(octokit, { pr }) {
@@ -532,6 +534,23 @@ function findAddedOrChangedFiles(octokit, { pr }) {
     });
 }
 exports.findAddedOrChangedFiles = findAddedOrChangedFiles;
+function findAddedOnlyFiles(octokit, { pr }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const result = yield octokit.rest.pulls.listFiles({
+            owner: pr.base.repo.owner.login,
+            repo: pr.base.repo.name,
+            pull_number: pr.number
+        });
+        const allChanges = result.data;
+        debug(`found %o changed files.`, allChanges.length);
+        const addedOnly = allChanges
+            .filter(change => change.status === 'added')
+            .map(change => change.filename);
+        debug(`after filtering out removed-changed files, found %o newly added. first 100: %O`, addedOnly.length, addedOnly.slice(0, 100));
+        return addedOnly;
+    });
+}
+exports.findAddedOnlyFiles = findAddedOnlyFiles;
 
 
 /***/ }),
@@ -1268,9 +1287,8 @@ exports.context = new Context.Context();
  * @param     token    the repo PAT or GITHUB_TOKEN
  * @param     options  other options to set
  */
-function getOctokit(token, options, ...additionalPlugins) {
-    const GitHubWithPlugins = utils_1.GitHub.plugin(...additionalPlugins);
-    return new GitHubWithPlugins(utils_1.getOctokitOptions(token, options));
+function getOctokit(token, options) {
+    return new utils_1.GitHub(utils_1.getOctokitOptions(token, options));
 }
 exports.getOctokit = getOctokit;
 //# sourceMappingURL=github.js.map
@@ -1352,7 +1370,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getOctokitOptions = exports.GitHub = exports.defaults = exports.context = void 0;
+exports.getOctokitOptions = exports.GitHub = exports.context = void 0;
 const Context = __importStar(__nccwpck_require__(4087));
 const Utils = __importStar(__nccwpck_require__(7914));
 // octokit + plugins
@@ -1361,13 +1379,13 @@ const plugin_rest_endpoint_methods_1 = __nccwpck_require__(3044);
 const plugin_paginate_rest_1 = __nccwpck_require__(4193);
 exports.context = new Context.Context();
 const baseUrl = Utils.getApiBaseUrl();
-exports.defaults = {
+const defaults = {
     baseUrl,
     request: {
         agent: Utils.getProxyAgent(baseUrl)
     }
 };
-exports.GitHub = core_1.Octokit.plugin(plugin_rest_endpoint_methods_1.restEndpointMethods, plugin_paginate_rest_1.paginateRest).defaults(exports.defaults);
+exports.GitHub = core_1.Octokit.plugin(plugin_rest_endpoint_methods_1.restEndpointMethods, plugin_paginate_rest_1.paginateRest).defaults(defaults);
 /**
  * Convience function to correctly format Octokit Options to pass into the constructor.
  *
