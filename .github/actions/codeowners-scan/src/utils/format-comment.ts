@@ -55,7 +55,7 @@ export function toMarkdown(
     fileOnlyPatterns: scanResult.fileOnlyPatterns,
     createdAt: new Date(Date.now()).toISOString(),
     runDetails,
-    passed: scanResult.unownedFiles.length === 0
+    passed: (scanResult.unownedFiles.length === 0 && scanResult.userOwnedFiles === 0)
   }
 
   const footer = footerTemplate(context)
