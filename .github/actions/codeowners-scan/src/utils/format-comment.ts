@@ -31,8 +31,9 @@ const HELPERS = {
 type RenderContext = {
   sha: string
   unownedFiles: string[]
+  userOwnedFiles: string[]
   codeownersFiles: string[]
-  patterns: string[]
+  fileOnlyPatterns: string[]
   uuid: string
   createdAt: string
   runDetails: RunDetails
@@ -49,8 +50,9 @@ export function toMarkdown(
     sha,
     uuid: UUID,
     unownedFiles: scanResult.unownedFiles,
+    userOwnedFiles: scanResult.userOwnedFiles,
     codeownersFiles: scanResult.codeownersFiles,
-    patterns: scanResult.patterns,
+    fileOnlyPatterns: scanResult.fileOnlyPatterns,
     createdAt: new Date(Date.now()).toISOString(),
     runDetails,
     passed: scanResult.unownedFiles.length === 0

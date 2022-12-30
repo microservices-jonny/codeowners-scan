@@ -84,17 +84,21 @@ function run() {
             for (const filename of scanResult.unownedFiles) {
                 core.info(`Did not match: ${filename}`);
             }
-            if (scanResult.unownedFiles.length > 0 || !onlyCommentOnFailedChecks) {
+            core.info(`${scanResult.userOwnedFiles.length} new files not owned by a team in @Addepar/`);
+            for (const filename of scanResult.userOwnedFiles) {
+                core.info(`Not owned by a team: ${filename}`);
+            }
+            if (scanResult.unownedFiles.length > 0 || scanResult.userOwnedFiles.length > 0 || !onlyCommentOnFailedChecks) {
                 const runDetails = (0, get_run_details_1.getRunDetails)(github.context);
                 const comment = (0, format_comment_1.toMarkdown)(scanResult, { sha: afterSha, runDetails });
                 yield (0, create_or_update_comment_1.createOrUpdateComment)(octokit, { pr, body: comment });
             }
-            else if (scanResult.unownedFiles.length === 0) {
+            else if (scanResult.unownedFiles.length === 0 && scanResult.userOwnedFiles.length === 0) {
                 yield (0, create_or_update_comment_1.nothingOrRemoveComment)(octokit, pr);
             }
-            // FAILING
-            if (scanResult.unownedFiles.length) {
-                core.setFailed(`${scanResult.unownedFiles.length} file(s) are not covered by a CODEOWNERS rule`);
+            // FAILING for unowned 
+            if (scanResult.unownedFiles.length || scanResult.userOwnedFiles.length) {
+                core.setFailed(`${scanResult.unownedFiles.length + scanResult.userOwnedFiles.length} file(s) are not covered by a CODEOWNERS rule`);
             }
         }
         catch (error) {
@@ -149,7 +153,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.scan = exports.isSomePatternMatch = exports.debug = void 0;
+exports.scan = exports.isSomeOwnerMatch = exports.isSomePatternMatch = exports.debug = void 0;
 const github = __importStar(__nccwpck_require__(5438));
 const ignore_1 = __importDefault(__nccwpck_require__(1230));
 const debug_1 = __importDefault(__nccwpck_require__(0));
@@ -161,14 +165,27 @@ exports.debug = debug_1.default.extend('codeowners-file');
 /*
  * Whether the filename matches one of the passed patterns.
  */
-function isSomePatternMatch(filename, patterns) {
-    return (0, ignore_1.default)().add(patterns).ignores(filename);
+function isSomePatternMatch(filename, fileOnlyPatterns) {
+    return (0, ignore_1.default)().add(fileOnlyPatterns).ignores(filename);
 }
 exports.isSomePatternMatch = isSomePatternMatch;
+function isSomeOwnerMatch(filename, patterns) {
+    for (const [pattern, owner] of patterns) {
+        if (filename === pattern) {
+            if (!owner.startsWith("@Addepar/")) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+exports.isSomeOwnerMatch = isSomeOwnerMatch;
 function parseAllPatterns(codeownersFilesMap) {
     let patterns = [];
     for (const [file, contents] of Object.entries(codeownersFilesMap)) {
-        const parsedPatterns = parseCodeownersPatterns(contents);
+        // BELOW: Switching from parsedPatterns being a list of file paths to a list of tuples containing file path and owner
+        const parsedPatterns = parseCodeowners(contents);
+        //const parsedPatterns = parseCodeownersPatterns(contents)
         (0, exports.debug)(`Parsed %o patterns from file %o`, parsedPatterns.length, file);
         patterns = [...patterns, ...parsedPatterns];
     }
@@ -191,12 +208,19 @@ function scan(token, { pr }) {
         //const addedOrChangedFiles = await findAddedOrChangedFiles(octokit, {pr})
         const addedOnlyFiles = yield (0, fetch_pr_changed_files_1.findAddedOnlyFiles)(octokit, { pr });
         const patterns = parseAllPatterns(codeownersFilesMap);
-        const unownedFiles = addedOnlyFiles.filter(filename => !isSomePatternMatch(filename, patterns));
+        let fileOnlyPatterns = [];
+        for (const [pattern, owner] of patterns) {
+            fileOnlyPatterns.push(pattern);
+        }
+        const unownedFiles = addedOnlyFiles.filter(filename => !isSomePatternMatch(filename, fileOnlyPatterns));
+        const userOwnedFiles = addedOnlyFiles.filter(filename => !isSomeOwnerMatch(filename, patterns));
         return {
             codeownersFiles: Object.keys(codeownersFilesMap),
             addedOnlyFiles,
             unownedFiles,
-            patterns
+            userOwnedFiles,
+            patterns,
+            fileOnlyPatterns
         };
     });
 }
@@ -237,6 +261,7 @@ function parseCodeowners(codeowners) {
     });
 }
 function parseCodeownersPatterns(codeowners) {
+    // below will remove the owner and only return the file
     return parseCodeowners(codeowners).map(tuple => tuple[0]);
 }
 
@@ -429,8 +454,9 @@ function toMarkdown(scanResult, { sha, runDetails }) {
         sha,
         uuid: constants_1.UUID,
         unownedFiles: scanResult.unownedFiles,
+        userOwnedFiles: scanResult.userOwnedFiles,
         codeownersFiles: scanResult.codeownersFiles,
-        patterns: scanResult.patterns,
+        fileOnlyPatterns: scanResult.fileOnlyPatterns,
         createdAt: new Date(Date.now()).toISOString(),
         runDetails,
         passed: scanResult.unownedFiles.length === 0
@@ -1287,8 +1313,9 @@ exports.context = new Context.Context();
  * @param     token    the repo PAT or GITHUB_TOKEN
  * @param     options  other options to set
  */
-function getOctokit(token, options) {
-    return new utils_1.GitHub(utils_1.getOctokitOptions(token, options));
+function getOctokit(token, options, ...additionalPlugins) {
+    const GitHubWithPlugins = utils_1.GitHub.plugin(...additionalPlugins);
+    return new GitHubWithPlugins(utils_1.getOctokitOptions(token, options));
 }
 exports.getOctokit = getOctokit;
 //# sourceMappingURL=github.js.map
@@ -1370,7 +1397,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getOctokitOptions = exports.GitHub = exports.context = void 0;
+exports.getOctokitOptions = exports.GitHub = exports.defaults = exports.context = void 0;
 const Context = __importStar(__nccwpck_require__(4087));
 const Utils = __importStar(__nccwpck_require__(7914));
 // octokit + plugins
@@ -1379,13 +1406,13 @@ const plugin_rest_endpoint_methods_1 = __nccwpck_require__(3044);
 const plugin_paginate_rest_1 = __nccwpck_require__(4193);
 exports.context = new Context.Context();
 const baseUrl = Utils.getApiBaseUrl();
-const defaults = {
+exports.defaults = {
     baseUrl,
     request: {
         agent: Utils.getProxyAgent(baseUrl)
     }
 };
-exports.GitHub = core_1.Octokit.plugin(plugin_rest_endpoint_methods_1.restEndpointMethods, plugin_paginate_rest_1.paginateRest).defaults(defaults);
+exports.GitHub = core_1.Octokit.plugin(plugin_rest_endpoint_methods_1.restEndpointMethods, plugin_paginate_rest_1.paginateRest).defaults(exports.defaults);
 /**
  * Convience function to correctly format Octokit Options to pass into the constructor.
  *
