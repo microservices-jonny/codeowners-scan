@@ -172,7 +172,7 @@ exports.isSomePatternMatch = isSomePatternMatch;
 function isSomeOwnerMatch(filename, patterns) {
     for (const [pattern, owner] of patterns) {
         if (filename === pattern) {
-            if (!owner.startsWith("@Addepar/")) {
+            if (!owner.toLowerCase().startsWith("@Addepar/")) {
                 return false;
             }
         }
@@ -459,7 +459,7 @@ function toMarkdown(scanResult, { sha, runDetails }) {
         fileOnlyPatterns: scanResult.fileOnlyPatterns,
         createdAt: new Date(Date.now()).toISOString(),
         runDetails,
-        passed: scanResult.unownedFiles.length === 0
+        passed: (scanResult.unownedFiles.length === 0 && scanResult.userOwnedFiles.length === 0)
     };
     const footer = footerTemplate(context);
     const bodyFooterSeparator = '\n\n';
