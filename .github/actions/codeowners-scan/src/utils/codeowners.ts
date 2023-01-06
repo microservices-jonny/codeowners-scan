@@ -26,7 +26,7 @@ export function isSomeOwnerMatch(
   patterns: [string, string][]
 ): boolean {
   for(const [pattern, owner] of patterns) {
-    if(filename===pattern) {
+    if (isSomePatternMatch(filename, patterns)) {
       if(!owner.toLowerCase().startsWith("@Addepar/")){
           return false
       }
