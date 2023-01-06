@@ -98,7 +98,11 @@ function run() {
             }
             // FAILING for unowned 
             if (scanResult.unownedFiles.length || scanResult.userOwnedFiles.length) {
-                core.setFailed(`${scanResult.unownedFiles.length + scanResult.userOwnedFiles.length} file(s) are not covered by a CODEOWNERS rule`);
+                const msg = [
+                    scanResult.unownedFiles.length && `${scanResult.unownedFiles.length} file(s) are not covered by a CODEOWNERS rule`,
+                    scanResult.userOwnedFiles.length && `${scanResult.userOwnedFiles.length} file(s) are covered by a CODEOWNERS rule that is a user but should be a team`
+                ].filter(Boolean).join(' and ');
+                core.setFailed(msg);
             }
         }
         catch (error) {
@@ -170,14 +174,7 @@ function isSomePatternMatch(filename, fileOnlyPatterns) {
 }
 exports.isSomePatternMatch = isSomePatternMatch;
 function isSomeOwnerMatch(filename, patterns) {
-    for (const [pattern, owner] of patterns) {
-        if (filename === pattern) {
-            if (!owner.toLowerCase().startsWith("@Addepar/")) {
-                return false;
-            }
-        }
-    }
-    return true;
+    return patterns.some(([pattern, owner]) => isSomePatternMatch(filename, [pattern]) && owner.toLowerCase().startsWith('@addepar/'));
 }
 exports.isSomeOwnerMatch = isSomeOwnerMatch;
 function parseAllPatterns(codeownersFilesMap) {
