@@ -18,7 +18,7 @@ Unowned file count: {{unownedFiles.length}}
 {{/if}}
 
 {{#if userOwnedFiles.length}}
-User owned file count (these should be owned by a team, instead): {{userOwnedFiles.length}}
+Found {{userOwnedFiles.length}} files with a codeowners rule that specifies a user rather than a team. These should be changed to be owned by a team:
 
 {{#each userOwnedFiles as |file|}}
   * {{file}}
