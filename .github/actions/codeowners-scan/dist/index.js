@@ -174,7 +174,7 @@ function isSomePatternMatch(filename, fileOnlyPatterns) {
 }
 exports.isSomePatternMatch = isSomePatternMatch;
 function isSomeOwnerMatch(filename, patterns) {
-    return patterns.some(([pattern, owner]) => !isSomePatternMatch(filename, [pattern]) && owner.toLowerCase().startsWith('@addepar/'));
+    return patterns.some(([pattern, owner]) => isSomePatternMatch(filename, [pattern]) && owner.toLowerCase().startsWith('@addepar/'));
 }
 exports.isSomeOwnerMatch = isSomeOwnerMatch;
 function parseAllPatterns(codeownersFilesMap) {
