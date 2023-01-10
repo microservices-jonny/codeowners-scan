@@ -16,17 +16,28 @@ export const debug = debugBase.extend('codeowners-file')
 
 export function isSomePatternMatch(
   filename: string,
-  patterns: string[]
+  fileOnlyPatterns: string[]
 ): boolean {
-  return ignore().add(patterns).ignores(filename)
+  return ignore().add(fileOnlyPatterns).ignores(filename)
+}
+
+export function isSomeOwnerMatch(
+  filename: string,
+  patterns: [string, string][]
+): boolean {
+  return patterns.some(([pattern, owner]) => isSomePatternMatch(filename, [pattern]) && owner.toLowerCase().startsWith('@addepar/'))
 }
 
 function parseAllPatterns(
   codeownersFilesMap: Record<string, string>
-): string[] {
-  let patterns: string[] = []
+): [string, string][] {
+  let patterns: [string, string][] = []
   for (const [file, contents] of Object.entries(codeownersFilesMap)) {
-    const parsedPatterns = parseCodeownersPatterns(contents)
+    // BELOW: Switching from parsedPatterns being a list of file paths to a list of tuples containing file path and owner
+    
+    const parsedPatterns = parseCodeowners(contents)
+    //const parsedPatterns = parseCodeownersPatterns(contents)
+
     debug(`Parsed %o patterns from file %o`, parsedPatterns.length, file)
     patterns = [...patterns, ...parsedPatterns]
   }
@@ -60,15 +71,26 @@ export async function scan(
   //const addedOrChangedFiles = await findAddedOrChangedFiles(octokit, {pr})
   const addedOnlyFiles = await findAddedOnlyFiles(octokit, {pr})
   const patterns = parseAllPatterns(codeownersFilesMap)
+
+  let fileOnlyPatterns: string[] = []
+  for(const [pattern, owner] of patterns) {
+    fileOnlyPatterns.push(pattern)
+  }
+
   const unownedFiles = addedOnlyFiles.filter(
-    filename => !isSomePatternMatch(filename, patterns)
+    filename => !isSomePatternMatch(filename, fileOnlyPatterns)
+  )
+  const userOwnedFiles = addedOnlyFiles.filter(
+    filename => !isSomeOwnerMatch(filename, patterns)
   )
 
   return {
     codeownersFiles: Object.keys(codeownersFilesMap),
     addedOnlyFiles,
     unownedFiles,
-    patterns
+    userOwnedFiles,
+    patterns,
+    fileOnlyPatterns
   }
 }
 
@@ -110,5 +132,6 @@ function parseCodeowners(codeowners: string): [string, string][] {
 }
 
 function parseCodeownersPatterns(codeowners: string): string[] {
+  // below will remove the owner and only return the file
   return parseCodeowners(codeowners).map(tuple => tuple[0])
 }

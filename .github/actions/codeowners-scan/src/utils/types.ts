@@ -4,7 +4,9 @@ export type MyOctokit = ReturnType<typeof github.getOctokit>
 
 export type ScanResult = {
   addedOnlyFiles: string[]
-  unownedFiles: string[]
-  patterns: string[]
+  unownedFiles: string[],
+  userOwnedFiles: string[],
+  patterns: [string, string][],
+  fileOnlyPatterns: string[],
   codeownersFiles: string[]
 }

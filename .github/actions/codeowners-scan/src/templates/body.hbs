@@ -1,6 +1,6 @@
 ## Scan Codeowners Results {{#if passed}}✅{{else}}❌{{/if}}
 
-Found {{patterns.length}} patterns in the following codeowners files:
+Found {{fileOnlyPatterns.length}} patterns in the following codeowners files:
 
 {{#each codeownersFiles as |file|}}
   * {{file}} {{#if isPreferredCodeownersFile}}{{else}}⚠️{{/if}}
@@ -9,8 +9,18 @@ Found {{patterns.length}} patterns in the following codeowners files:
 
 #### Commit {{sha}}
 
+{{#if unownedFiles.length}}
 Unowned file count: {{unownedFiles.length}}
 
 {{#each unownedFiles as |file|}}
   * {{file}}
 {{/each}}
+{{/if}}
+
+{{#if userOwnedFiles.length}}
+Found {{userOwnedFiles.length}} files with a codeowners rule that specifies a user rather than a team. These should be changed to be owned by a team:
+
+{{#each userOwnedFiles as |file|}}
+  * {{file}}
+{{/each}}
+{{/if}}

@@ -64,16 +64,25 @@ async function run(): Promise<void> {
       core.info(`Did not match: ${filename}`)
     }
 
-    if (scanResult.unownedFiles.length > 0 || !onlyCommentOnFailedChecks) {
+    core.info(`${scanResult.userOwnedFiles.length} new files not owned by a team in @Addepar/`)
+    for (const filename of scanResult.userOwnedFiles) {
+      core.info(`Not owned by a team: ${filename}`)
+    }
+
+    if (scanResult.unownedFiles.length > 0 || scanResult.userOwnedFiles.length > 0 || !onlyCommentOnFailedChecks) {
       const runDetails = getRunDetails(github.context)
       const comment = toMarkdown(scanResult, {sha: afterSha, runDetails})
       await createOrUpdateComment(octokit, {pr, body: comment})
-    } else if (scanResult.unownedFiles.length === 0) {
+    } else if (scanResult.unownedFiles.length === 0 && scanResult.userOwnedFiles.length === 0) {
       await nothingOrRemoveComment(octokit, pr)
     }
-    // FAILING
-    if (scanResult.unownedFiles.length) {
-      core.setFailed(`${scanResult.unownedFiles.length} file(s) are not covered by a CODEOWNERS rule`);
+    // FAILING for unowned 
+    if (scanResult.unownedFiles.length || scanResult.userOwnedFiles.length) {
+      const msg = [
+        scanResult.unownedFiles.length && `${scanResult.unownedFiles.length} file(s) are not covered by a CODEOWNERS rule`,
+        scanResult.userOwnedFiles.length && `${scanResult.userOwnedFiles.length} file(s) are covered by a CODEOWNERS rule that is a user but should be a team`
+      ].filter(Boolean).join(' and ');
+      core.setFailed(msg);
     }
     
   } catch (error) {
