@@ -174,7 +174,7 @@ function isSomePatternMatch(filename, fileOnlyPatterns) {
 }
 exports.isSomePatternMatch = isSomePatternMatch;
 function isSomeOwnerMatch(filename, patterns) {
-    return patterns.some(([pattern, owner]) => !isSomePatternMatch(filename, [pattern]) || isSomePatternMatch(filename, [pattern]) && owner.toLowerCase().startsWith('@addepar/'));
+    return patterns.some(([pattern, owner]) => isSomePatternMatch(filename, [pattern]) && !owner.toLowerCase().startsWith('@addepar/'));
 }
 exports.isSomeOwnerMatch = isSomeOwnerMatch;
 function parseAllPatterns(codeownersFilesMap) {
@@ -210,7 +210,7 @@ function scan(token, { pr }) {
             fileOnlyPatterns.push(pattern);
         }
         const unownedFiles = addedOnlyFiles.filter(filename => !isSomePatternMatch(filename, fileOnlyPatterns));
-        const userOwnedFiles = addedOnlyFiles.filter(filename => isSomeOwnerMatch(filename, patterns));
+        const userOwnedFiles = addedOnlyFiles.filter(filename => !isSomeOwnerMatch(filename, patterns));
         return {
             codeownersFiles: Object.keys(codeownersFilesMap),
             addedOnlyFiles,
