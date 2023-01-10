@@ -81,7 +81,7 @@ export async function scan(
     filename => !isSomePatternMatch(filename, fileOnlyPatterns)
   )
   const userOwnedFiles = addedOnlyFiles.filter(
-    filename => isSomeOwnerMatch(filename, patterns)
+    filename => !isSomeOwnerMatch(filename, patterns)
   )
 
   return {

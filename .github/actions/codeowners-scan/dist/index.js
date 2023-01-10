@@ -210,7 +210,7 @@ function scan(token, { pr }) {
             fileOnlyPatterns.push(pattern);
         }
         const unownedFiles = addedOnlyFiles.filter(filename => !isSomePatternMatch(filename, fileOnlyPatterns));
-        const userOwnedFiles = addedOnlyFiles.filter(filename => isSomeOwnerMatch(filename, patterns));
+        const userOwnedFiles = addedOnlyFiles.filter(filename => !isSomeOwnerMatch(filename, patterns));
         return {
             codeownersFiles: Object.keys(codeownersFilesMap),
             addedOnlyFiles,
