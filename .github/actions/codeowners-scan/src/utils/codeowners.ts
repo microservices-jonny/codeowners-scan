@@ -25,7 +25,7 @@ export function isSomeOwnerMatch(
   filename: string,
   patterns: [string, string][]
 ): boolean {
-  return patterns.some(([pattern, owner]) => isSomePatternMatch(filename, [pattern]) && owner.toLowerCase().startsWith('@addepar/'))
+  return patterns.some(([pattern, owner]) => !isSomePatternMatch(filename, [pattern]) || isSomePatternMatch(filename, [pattern]) && owner.toLowerCase().startsWith('@addepar/'))
 }
 
 function parseAllPatterns(
