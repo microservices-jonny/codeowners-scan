@@ -25,7 +25,7 @@ export function isSomeOwnerMatch(
   filename: string,
   patterns: [string, string][]
 ): boolean {
-  return patterns.some(([pattern, owner]) => isSomePatternMatch(filename, [pattern]) && owner.toLowerCase().startsWith('@addepar/'))
+  return patterns.some(([pattern, owner]) => isSomePatternMatch(filename, [pattern]) && !owner.toLowerCase().startsWith('@addepar/'))
 }
 
 function parseAllPatterns(
@@ -81,7 +81,7 @@ export async function scan(
     filename => !isSomePatternMatch(filename, fileOnlyPatterns)
   )
   const userOwnedFiles = addedOnlyFiles.filter(
-    filename => !isSomeOwnerMatch(filename, patterns)
+    filename => isSomeOwnerMatch(filename, patterns)
   )
 
   return {
