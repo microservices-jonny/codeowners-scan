@@ -58,7 +58,8 @@ function extractPrDetails(pr: PullRequest): {
 
 export async function scan(
   token: string,
-  {pr}: {pr: PullRequest}
+  {pr}: {pr: PullRequest},
+  pathsToIgnore: string,
 ): Promise<ScanResult> {
   const octokit = github.getOctokit(token)
   const codeownersFilesMap = await fetchCodeownersFilesMap(
@@ -71,14 +72,16 @@ export async function scan(
   //const addedOrChangedFiles = await findAddedOrChangedFiles(octokit, {pr})
   const addedOnlyFiles = await findAddedOnlyFiles(octokit, {pr})
   const patterns = parseAllPatterns(codeownersFilesMap)
+  const parsedPathsToIgnore = (pathsToIgnore && pathsToIgnore.length !== 0) ? parseIgnorePattern(pathsToIgnore) : []
 
+  debug('ignore paths: ', parsedPathsToIgnore)
   let fileOnlyPatterns: string[] = []
   for(const [pattern, owner] of patterns) {
     fileOnlyPatterns.push(pattern)
   }
 
   const unownedFiles = addedOnlyFiles.filter(
-    filename => !isSomePatternMatch(filename, fileOnlyPatterns)
+    filename => !isSomePatternMatch(filename, fileOnlyPatterns.concat(parsedPathsToIgnore))
   )
   const userOwnedFiles = addedOnlyFiles.filter(
     filename => isSomeOwnerMatch(filename, patterns)
@@ -117,6 +120,13 @@ async function fetchCodeownersFilesMap(
   }
 
   return results
+}
+
+function parseIgnorePattern(ignorePatterns: string) : string[] {
+  return ignorePatterns
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
 }
 
 function parseCodeowners(codeowners: string): [string, string][] {

@@ -13,6 +13,10 @@ inputs:
     required: false
     default: true
     description: 'Only post a comment on the PR if the check fails'
+  paths_to_ignore:
+    required: false
+    default: ""
+    description: 'Paths to ignore'
 runs:
   using: 'node16'
   main: 'dist/index.js'
