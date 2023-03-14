@@ -17,6 +17,14 @@ inputs:
     required: false
     default: ""
     description: 'Paths to ignore'
+  new_module_indicator:
+    required: false
+    default: ""
+    description: 'New module indicator (e.g. "BUCK")'
+  scan_on_new_module_only:
+    required: false
+    default: false
+    description: 'Scan on new modules ONLY (when a BUCK file is introduced)'
 runs:
   using: 'node16'
   main: 'dist/index.js'

@@ -52,7 +52,7 @@ async function run(): Promise<void> {
 
     const scanResult = await scan(token, {pr}, pathsToIgnore, newModuleIndicator)
 
-    if (scanOnNewModuleOnly === "true"){
+    if (scanOnNewModuleOnly === 'true'){
       core.info(`scanOnNewModuleOnly is set to true... checking for new modules being added`)
       if(!newModuleIndicator || newModuleIndicator === ''){
         core.setFailed('scan_on_new_module_only is set to "true".. Please also ensure new_module_indicator is set as well! (e.g. "BUCK")')
