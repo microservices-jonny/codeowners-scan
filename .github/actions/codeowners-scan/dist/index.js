@@ -84,7 +84,7 @@ function run() {
             if (scanOnNewModuleOnly) {
                 core.info(`scanOnNewModuleOnly is set to true... checking for new modules being added`);
                 if (!newModuleIndicator || newModuleIndicator === '') {
-                    core.setFailed('scan_on_new_module_only is set to "true".. Please also ensure new_module_indicator is set as well! (e.g. "BUCK")');
+                    core.setFailed(`scan_on_new_module_only is set to "true".. Please also ensure new_module_indicator is set as well! (e.g. "BUCK")} ${newModuleIndicator}`);
                 }
                 else if (scanResult.introducesNewModuleIndicatorFile) {
                     core.info(`Found a new module indicator - CONTINUING ownership check`);
