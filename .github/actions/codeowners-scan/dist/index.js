@@ -81,7 +81,7 @@ function run() {
             const afterSha = payload.after;
             const pr = payload.pull_request;
             const scanResult = yield (0, codeowners_1.scan)(token, { pr }, pathsToIgnore, newModuleIndicator);
-            if (scanOnNewModuleOnly === 'true') {
+            if (scanOnNewModuleOnly) {
                 core.info(`scanOnNewModuleOnly is set to true... checking for new modules being added`);
                 if (!newModuleIndicator || newModuleIndicator === '') {
                     core.setFailed('scan_on_new_module_only is set to "true".. Please also ensure new_module_indicator is set as well! (e.g. "BUCK")');
