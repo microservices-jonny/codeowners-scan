@@ -14,3 +14,5 @@ jobs:
         uses: ./.github/actions/codeowners-scan
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          scan_on_new_module_only: true
+          new_module_indicator: BUCK
