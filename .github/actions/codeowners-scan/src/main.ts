@@ -28,6 +28,7 @@ async function run(): Promise<void> {
     const onlyCommentOnFailedChecks = core.getInput('only-comment-on-failed-checks')
     const pathsToIgnore = core.getInput('paths_to_ignore')
     const newModuleIndicator = core.getInput('new_module_indicator')
+    const scanOnNewModuleOnly = core.getInput('scan_on_new_module_only')
 
     if (enableDebugLog === 'true') {
       enableDebugging()
@@ -51,12 +52,20 @@ async function run(): Promise<void> {
 
     const scanResult = await scan(token, {pr}, pathsToIgnore, newModuleIndicator)
 
-    if (scanResult.introducesNewModuleIndicatorFile){
-      core.info(`Found a new module indicator - CONTINUING ownership check`)
+    if (scanOnNewModuleOnly === "true"){
+      core.info(`scanOnNewModuleOnly is set to true... checking for new modules being added`)
+      if(!newModuleIndicator || newModuleIndicator === ''){
+        core.setFailed('scan_on_new_module_only is set to "true".. Please also ensure new_module_indicator is set as well! (e.g. "BUCK")')
+      } else if (scanResult.introducesNewModuleIndicatorFile){
+        core.info(`Found a new module indicator - CONTINUING ownership check`)
+      } else {
+        core.info(`No new module indicator found - STOPPING ownership check`)
+        return
+      }
     } else {
-      core.info(`No new module indicator - STOPPING ownership check`)
-      return
+      core.info(`scanOnNewModuleOnly is not set OR is set to false... continuing with unowned file scan`)
     }
+    
     core.info(
       `Found ${scanResult.addedOnlyFiles.length} added or changed files for pr ${pr.number} [ref ${pr.head.ref}] relative to base ${pr.base.ref}`
     )
