@@ -63,6 +63,7 @@ function run() {
             const enableDebugLog = core.getInput('enable-debug-log');
             const onlyCommentOnFailedChecks = core.getInput('only-comment-on-failed-checks');
             const pathsToIgnore = core.getInput('paths_to_ignore');
+            const newModuleIndicator = core.getInput('new_module_indicator');
             if (enableDebugLog === 'true') {
                 (0, debug_1.enableDebugging)();
                 core.info('Debug log enabled');
@@ -78,7 +79,14 @@ function run() {
             payload = payload;
             const afterSha = payload.after;
             const pr = payload.pull_request;
-            const scanResult = yield (0, codeowners_1.scan)(token, { pr }, pathsToIgnore);
+            const scanResult = yield (0, codeowners_1.scan)(token, { pr }, pathsToIgnore, newModuleIndicator);
+            if (scanResult.introducesNewModuleIndicatorFile) {
+                core.info(`Found a new module indicator - CONTINUING ownership check`);
+            }
+            else {
+                core.info(`No new module indicator - STOPPING ownership check`);
+                return;
+            }
             core.info(`Found ${scanResult.addedOnlyFiles.length} added or changed files for pr ${pr.number} [ref ${pr.head.ref}] relative to base ${pr.base.ref}`);
             core.info(`Found ${scanResult.patterns.length} patterns in the following codeowners files ${scanResult.codeownersFiles.join(', ')}`);
             core.info(`${scanResult.unownedFiles.length} files failed to match`);
@@ -196,7 +204,7 @@ function extractPrDetails(pr) {
         ref: pr.head.ref
     };
 }
-function scan(token, { pr }, pathsToIgnore) {
+function scan(token, { pr }, pathsToIgnore, newModuleIndicator) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = github.getOctokit(token);
         const codeownersFilesMap = yield fetchCodeownersFilesMap(octokit, extractPrDetails(pr));
@@ -207,6 +215,15 @@ function scan(token, { pr }, pathsToIgnore) {
         const addedOnlyFiles = yield (0, fetch_pr_changed_files_1.findAddedOnlyFiles)(octokit, { pr });
         const patterns = parseAllPatterns(codeownersFilesMap);
         const parsedPathsToIgnore = (pathsToIgnore && pathsToIgnore.length !== 0) ? parseIgnorePattern(pathsToIgnore) : [];
+        let introducesNewModuleIndicatorFile = false;
+        (0, exports.debug)('Checking if new files contain new_module_indicator');
+        if (addedOnlyFiles.indexOf(newModuleIndicator) > -1) {
+            introducesNewModuleIndicatorFile = true;
+            (0, exports.debug)('  - A new_module_indicator was found!');
+        }
+        else {
+            (0, exports.debug)('  - No new_module_indicator was found.');
+        }
         (0, exports.debug)('ignore paths: ', parsedPathsToIgnore);
         let fileOnlyPatterns = [];
         for (const [pattern, owner] of patterns) {
@@ -220,7 +237,8 @@ function scan(token, { pr }, pathsToIgnore) {
             unownedFiles,
             userOwnedFiles,
             patterns,
-            fileOnlyPatterns
+            fileOnlyPatterns,
+            introducesNewModuleIndicatorFile
         };
     });
 }

@@ -27,6 +27,7 @@ async function run(): Promise<void> {
     const enableDebugLog = core.getInput('enable-debug-log')
     const onlyCommentOnFailedChecks = core.getInput('only-comment-on-failed-checks')
     const pathsToIgnore = core.getInput('paths_to_ignore')
+    const newModuleIndicator = core.getInput('new_module_indicator')
 
     if (enableDebugLog === 'true') {
       enableDebugging()
@@ -48,8 +49,14 @@ async function run(): Promise<void> {
     const afterSha = payload.after
     const pr = payload.pull_request as PullRequest
 
-    const scanResult = await scan(token, {pr}, pathsToIgnore)
+    const scanResult = await scan(token, {pr}, pathsToIgnore, newModuleIndicator)
 
+    if (scanResult.introducesNewModuleIndicatorFile){
+      core.info(`Found a new module indicator - CONTINUING ownership check`)
+    } else {
+      core.info(`No new module indicator - STOPPING ownership check`)
+      return
+    }
     core.info(
       `Found ${scanResult.addedOnlyFiles.length} added or changed files for pr ${pr.number} [ref ${pr.head.ref}] relative to base ${pr.base.ref}`
     )

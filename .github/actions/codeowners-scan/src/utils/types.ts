@@ -8,5 +8,6 @@ export type ScanResult = {
   userOwnedFiles: string[],
   patterns: [string, string][],
   fileOnlyPatterns: string[],
-  codeownersFiles: string[]
+  codeownersFiles: string[],
+  introducesNewModuleIndicatorFile: boolean
 }

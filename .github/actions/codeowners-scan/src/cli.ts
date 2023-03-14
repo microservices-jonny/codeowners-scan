@@ -5,6 +5,7 @@ import {scan} from './utils/codeowners'
 async function run(): Promise<void> {
   const token = process.env['GITHUB_TOKEN'] as string
   const pathsToIgnore = process.env['paths_to_ignore'] as string
+  const newModuleIndicator = process.env['new_module_indicator'] as string
   const octokit = github.getOctokit(token)
 
   const PR = parseInt(process.env['PR'] as string)
@@ -22,7 +23,7 @@ async function run(): Promise<void> {
     owner: OWNER
   })
   const pr = result.data as PullRequest
-  const scanResult = await scan(token, {pr}, pathsToIgnore)
+  const scanResult = await scan(token, {pr}, pathsToIgnore, newModuleIndicator)
 
   console.log(`${scanResult.unownedFiles.length} files failed to match`)
   for (const filename of scanResult.unownedFiles) {

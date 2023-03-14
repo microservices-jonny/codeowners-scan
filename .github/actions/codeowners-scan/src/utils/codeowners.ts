@@ -60,6 +60,7 @@ export async function scan(
   token: string,
   {pr}: {pr: PullRequest},
   pathsToIgnore: string,
+  newModuleIndicator: string
 ): Promise<ScanResult> {
   const octokit = github.getOctokit(token)
   const codeownersFilesMap = await fetchCodeownersFilesMap(
@@ -73,6 +74,15 @@ export async function scan(
   const addedOnlyFiles = await findAddedOnlyFiles(octokit, {pr})
   const patterns = parseAllPatterns(codeownersFilesMap)
   const parsedPathsToIgnore = (pathsToIgnore && pathsToIgnore.length !== 0) ? parseIgnorePattern(pathsToIgnore) : []
+  let introducesNewModuleIndicatorFile = false
+
+  debug('Checking if new files contain new_module_indicator')
+  if (addedOnlyFiles.indexOf(newModuleIndicator) > -1) {
+    introducesNewModuleIndicatorFile = true
+    debug('  - A new_module_indicator was found!')
+  } else {
+    debug('  - No new_module_indicator was found.')
+  }
 
   debug('ignore paths: ', parsedPathsToIgnore)
   let fileOnlyPatterns: string[] = []
@@ -93,7 +103,8 @@ export async function scan(
     unownedFiles,
     userOwnedFiles,
     patterns,
-    fileOnlyPatterns
+    fileOnlyPatterns,
+    introducesNewModuleIndicatorFile
   }
 }
 
